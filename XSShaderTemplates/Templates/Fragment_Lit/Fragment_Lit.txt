@@ -1,0 +1,102 @@
+﻿Shader "Template/Fragment_Lit"
+{
+	Properties
+	{
+        [Header(MAIN)]
+		_MainTex ("Main Texture", 2D) = "white" {}
+        _Color ("Color", Color) = (1,1,1,1)
+
+        [Space(16)]
+        [Header(NORMALS)]
+        _BumpMap("Normal Map", 2D) = "bump" {}
+        _BumpScale("Normal Scale", Range(-1,1)) = 1
+        
+        [Space(16)]
+        [Header(METALLIC)]
+        _MetallicGlossMap("Metallic Map", 2D) = "white" {}
+        _Metallic("Metallic", Range(0,1)) = 0
+        _Glossiness("Smoothness", Range(0,1)) = 0
+
+    }
+	SubShader
+	{
+		Tags { "Queue"="Geometry" }
+
+		Pass
+		{
+            Tags {"LightMode"="ForwardBase"}
+			CGPROGRAM
+			#pragma vertex vert
+			#pragma fragment frag
+            #pragma multi_compile_fwdbase 
+			
+			#include "UnityCG.cginc"
+            #include "Lighting.cginc"
+            #include "AutoLight.cginc"
+            
+			struct appdata
+			{
+				float4 vertex : POSITION;
+				float2 uv : TEXCOORD0;
+                float3 normal : NORMAL;
+                float3 tangent : TANGENT;
+			};
+
+			struct v2f
+			{
+                float4 pos : SV_POSITION;
+				float2 uv : TEXCOORD0;
+                float3 btn[3] : TEXCOORD1; //TEXCOORD2, TEXCOORD3 | bitangent, tangent, worldNormal
+                float3 worldPos : TEXCOORD4;
+                SHADOW_COORDS(5)
+			};
+
+            #include "Defines.cginc"
+            #include "LightingFunctions.cginc"
+			#include "VertFrag.cginc"
+			
+			ENDCG
+		}
+
+        Pass
+		{
+            Tags {"LightMode"="ForwardAdd"}
+            Blend One One
+            ZWrite Off
+            
+			CGPROGRAM
+			#pragma vertex vert
+			#pragma fragment frag
+            #pragma multi_compile_fwdadd_fullshadows
+			
+			#include "UnityCG.cginc"
+            #include "Lighting.cginc"
+            #include "AutoLight.cginc"
+            
+			struct appdata
+			{
+				float4 vertex : POSITION;
+				float2 uv : TEXCOORD0;
+                float3 normal : NORMAL;
+                float3 tangent : TANGENT;
+			};
+
+			struct v2f
+			{
+                float4 pos : SV_POSITION;
+				float2 uv : TEXCOORD0;
+                float3 btn[3] : TEXCOORD1; //TEXCOORD2, TEXCOORD3 | bitangent, tangent, worldNormal
+                float3 worldPos : TEXCOORD4;
+                SHADOW_COORDS(5)
+			};
+
+            #include "Defines.cginc"
+            #include "LightingFunctions.cginc"
+			#include "VertFrag.cginc"
+			
+			ENDCG
+		}
+
+	}
+    Fallback "Diffuse"
+}
