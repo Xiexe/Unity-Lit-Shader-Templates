@@ -1,6 +1,39 @@
 ﻿// Tessellation programs based on this article by Catlike Coding:
 // https://catlikecoding.com/unity/tutorials/advanced-rendering/tessellation/
 
+float UnityDistanceFromPlane (float3 pos, float4 plane)
+{
+    float d = dot (float4(pos,1.0f), plane);
+    return d;
+}
+
+// Returns true if triangle with given 3 world positions is outside of camera's view frustum.
+// cullEps is distance outside of frustum that is still considered to be inside (i.e. max displacement)
+bool UnityWorldViewFrustumCull (float3 wpos0, float3 wpos1, float3 wpos2, float cullEps)
+{
+    float4 planeTest;
+
+    // left
+    planeTest.x = (( UnityDistanceFromPlane(wpos0, unity_CameraWorldClipPlanes[0]) > -cullEps) ? 1.0f : 0.0f ) +
+                  (( UnityDistanceFromPlane(wpos1, unity_CameraWorldClipPlanes[0]) > -cullEps) ? 1.0f : 0.0f ) +
+                  (( UnityDistanceFromPlane(wpos2, unity_CameraWorldClipPlanes[0]) > -cullEps) ? 1.0f : 0.0f );
+    // right
+    planeTest.y = (( UnityDistanceFromPlane(wpos0, unity_CameraWorldClipPlanes[1]) > -cullEps) ? 1.0f : 0.0f ) +
+                  (( UnityDistanceFromPlane(wpos1, unity_CameraWorldClipPlanes[1]) > -cullEps) ? 1.0f : 0.0f ) +
+                  (( UnityDistanceFromPlane(wpos2, unity_CameraWorldClipPlanes[1]) > -cullEps) ? 1.0f : 0.0f );
+    // top
+    planeTest.z = (( UnityDistanceFromPlane(wpos0, unity_CameraWorldClipPlanes[2]) > -cullEps) ? 1.0f : 0.0f ) +
+                  (( UnityDistanceFromPlane(wpos1, unity_CameraWorldClipPlanes[2]) > -cullEps) ? 1.0f : 0.0f ) +
+                  (( UnityDistanceFromPlane(wpos2, unity_CameraWorldClipPlanes[2]) > -cullEps) ? 1.0f : 0.0f );
+    // bottom
+    planeTest.w = (( UnityDistanceFromPlane(wpos0, unity_CameraWorldClipPlanes[3]) > -cullEps) ? 1.0f : 0.0f ) +
+                  (( UnityDistanceFromPlane(wpos1, unity_CameraWorldClipPlanes[3]) > -cullEps) ? 1.0f : 0.0f ) +
+                  (( UnityDistanceFromPlane(wpos2, unity_CameraWorldClipPlanes[3]) > -cullEps) ? 1.0f : 0.0f );
+
+    // has to pass all 4 plane tests to be visible
+    return !all (planeTest);
+}
+
 struct TessellationFactors 
 {
 	float edge[3] : SV_TessFactor;
@@ -30,38 +63,46 @@ float TessEdgeFactor(float3 p0, float3 p1)
 TessellationFactors patchConstantFunction (InputPatch<vertexInput, 3> patch)
 {
 	TessellationFactors f;
+    float3 p0 = mul(unity_ObjectToWorld, patch[0].vertex).xyz;
+    float3 p1 = mul(unity_ObjectToWorld, patch[1].vertex).xyz;
+    float3 p2 = mul(unity_ObjectToWorld, patch[2].vertex).xyz;
+    float bias = 0;
+    
 
-    if(_TessellationMode == 1)
+    if(UnityWorldViewFrustumCull(p0, p1, p2, bias))
     {
-        float3 p0 = mul(unity_ObjectToWorld, patch[0].vertex).xyz;
-        float3 p1 = mul(unity_ObjectToWorld, patch[1].vertex).xyz;
-        float3 p2 = mul(unity_ObjectToWorld, patch[2].vertex).xyz;
-
-        // float tessFactor = 	
-        f.edge[0] = TessEdgeFactor(p1, p2);
-        f.edge[1] = TessEdgeFactor(p2, p0);
-        f.edge[2] = TessEdgeFactor(p0, p1);
-        f.inside =
-            (TessEdgeFactor(p1, p2) +
-            TessEdgeFactor(p2, p0) +
-            TessEdgeFactor(p0, p1)) * (1 / 3.0);
-    }
-    else if(_TessellationMode == 0)
-    {
-        _TessellationUniform *= 50;
-        f.edge[0] = _TessellationUniform;
-        f.edge[1] = _TessellationUniform;
-        f.edge[2] = _TessellationUniform;
-        f.inside = _TessellationUniform;
+        f.edge[0] = f.edge[1] = f.edge[2] = f.inside = 0;
     }
     else
     {
-        _TessellationUniform *= 50;
-        f.edge[0] = _TessellationUniform;
-        f.edge[1] = _TessellationUniform;
-        f.edge[2] = _TessellationUniform;
-        f.inside = _TessellationUniform;
+        if(_TessellationMode == 1)
+        {
+            f.edge[0] = TessEdgeFactor(p1, p2);
+            f.edge[1] = TessEdgeFactor(p2, p0);
+            f.edge[2] = TessEdgeFactor(p0, p1);
+            f.inside =
+                (TessEdgeFactor(p1, p2) +
+                TessEdgeFactor(p2, p0) +
+                TessEdgeFactor(p0, p1)) * (1 / 3.0);
+        }
+        else if(_TessellationMode == 0)
+        {
+            _TessellationUniform *= 50;
+            f.edge[0] = _TessellationUniform;
+            f.edge[1] = _TessellationUniform;
+            f.edge[2] = _TessellationUniform;
+            f.inside = _TessellationUniform;
+        }
+        else
+        {
+            _TessellationUniform *= 50;
+            f.edge[0] = _TessellationUniform;
+            f.edge[1] = _TessellationUniform;
+            f.edge[2] = _TessellationUniform;
+            f.inside = _TessellationUniform;
+        }
     }
+
 
     return f;
 }
