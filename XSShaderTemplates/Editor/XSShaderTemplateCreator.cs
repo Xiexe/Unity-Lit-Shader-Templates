@@ -9,8 +9,8 @@ public class XSShaderTemplateCreator
     private static string createPath = "";
     private static string templatePath = "";
 
-    private static List<string> templateShaders = new List<string>{ "/Fragment_Lit", "/Geometry_Lit", "/Tessellated_Lit", "/TesellatedGeometry_Lit" };
-    private static List<string> newShaders = new List<string>{ "/New_Fragment_Lit", "/New_Geometry_Lit", "/New_Tessellated_Lit", "/New_TesellatedGeometry_Lit" };
+    private static List<string> templateShaders = new List<string>{ "/Fragment_Lit", "/Geometry_Lit", "/Tessellated_Lit", "/TessellatedGeometry_Lit" };
+    private static List<string> newShaders = new List<string>{ "/New_Fragment_Lit", "/New_Geometry_Lit", "/New_Tessellated_Lit", "/New_TessellatedGeometry_Lit" };
 
     [MenuItem("Assets/Create/Shader/Custom/Fragment_Lit")]
     private static void CreateShaderFragLit()
