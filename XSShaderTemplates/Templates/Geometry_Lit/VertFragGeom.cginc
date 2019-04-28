@@ -48,7 +48,7 @@ fixed4 frag (g2f i) : SV_Target
     #else
 
     //LIGHTING PARAMS
-    UNITY_LIGHT_ATTENUATION(attenuation, i, i.worldPos);
+    UNITY_LIGHT_ATTENUATION(attenuation, i, i.worldPos.xyz);
     float3 lightDir = getLightDir(i.worldPos);
     float4 lightCol = _LightColor0;
 

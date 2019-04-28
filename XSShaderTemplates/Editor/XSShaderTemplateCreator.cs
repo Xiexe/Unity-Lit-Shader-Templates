@@ -30,11 +30,11 @@ public class XSShaderTemplateCreator
     //     getPathAndCreate(2);
     // }
 
-    // [MenuItem("Assets/Create/Shader/Custom/TessellatedGeometry_Lit")]
-    // private static void CreateShaderTessGeoLit()
-    // {
-    //     getPathAndCreate(3);
-    // }
+    [MenuItem("Assets/Create/Shader/Custom/TessellatedGeometry_Lit")]
+    private static void CreateShaderTessGeoLit()
+    {
+        getPathAndCreate(3);
+    }
 
     private static void getPathAndCreate(int index)
     {

@@ -1,27 +1,43 @@
-﻿//This file contains the vertex and fragment functions for both the ForwardBase and Forward Add pass.
+#include "Tessellation.cginc"
 
-v2f vert (appdata v)
+[maxvertexcount(3)]
+void geom(triangle vertexOutput v[3], inout TriangleStream<g2f> tristream)
 {
-    v2f o;
-    float3 worldNormal = UnityObjectToWorldNormal(v.normal);
-    float3 tangent = UnityObjectToWorldDir(v.tangent);
-    float3 bitangent = cross(tangent, worldNormal);
+    g2f o = (g2f)0;
 
-    o.pos = UnityObjectToClipPos(v.vertex);
-    o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-    o.btn[0] = bitangent;
-    o.btn[1] = tangent;
-    o.btn[2] = worldNormal;
-    o.worldPos = mul(unity_ObjectToWorld, v.vertex);
+    for (int i = 0; i < 3; i++)
+    {
+        float3 worldNormal = UnityObjectToWorldNormal(v[i].normal);
+        float3 tangent = UnityObjectToWorldDir(v[i].tangent);
+        float3 bitangent = cross(tangent, worldNormal);
 
-    UNITY_TRANSFER_SHADOW(o, o.uv);
-    return o;
+        o.pos = UnityObjectToClipPos(v[i].vertex);
+        o.uv = TRANSFORM_TEX(v[i].uv, _MainTex);
+        
+        //Only pass needed things through for shadow caster
+        #if !defined(UNITY_PASS_SHADOWCASTER)
+        o.btn[0] = bitangent;
+        o.btn[1] = tangent;
+        o.btn[2] = worldNormal;
+        o.worldPos = mul(unity_ObjectToWorld, v[i].vertex);
+
+        UNITY_TRANSFER_SHADOW(o, o.uv);
+        #endif
+        tristream.Append(o);
+    }
+    tristream.RestartStrip();
 }
-			
-fixed4 frag (v2f i) : SV_Target
+
+fixed4 frag (g2f i) : SV_Target
 {
+    //Return only this if in the shadowcaster
+    #if defined(UNITY_PASS_SHADOWCASTER)
+        SHADOW_CASTER_FRAGMENT(i);
+    #else
+
     //LIGHTING PARAMS
     UNITY_LIGHT_ATTENUATION(attenuation, i, i.worldPos.xyz);
+
     float3 lightDir = getLightDir(i.worldPos);
     float4 lightCol = _LightColor0;
 
@@ -63,5 +79,7 @@ fixed4 frag (v2f i) : SV_Target
     lighting += indirectSpecular;
 
     float4 col = lighting.xyzz;
-    return col;
+    return col.xyzz;
+    
+    #endif
 }
