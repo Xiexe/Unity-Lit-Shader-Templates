@@ -29,6 +29,10 @@
 			#pragma vertex vert
 			#pragma fragment frag
             #pragma multi_compile_fwdbase 
+
+            #ifndef UNITY_PASS_FORWARDBASE
+                #define UNITY_PASS_FORWARDBASE
+            #endif
 			
 			#include "UnityCG.cginc"
             #include "Lighting.cginc"
@@ -68,7 +72,11 @@
 			#pragma vertex vert
 			#pragma fragment frag
             #pragma multi_compile_fwdadd_fullshadows
-			
+            
+            #ifndef UNITY_PASS_FORWARDADD
+                #define UNITY_PASS_FORWARDADD
+            #endif
+
 			#include "UnityCG.cginc"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
@@ -97,6 +105,40 @@
 			ENDCG
 		}
 
+        Pass
+        {
+            Tags{"LightMode" = "ShadowCaster"} //Removed "DisableBatching" = "True". If issues arise re-add this.
+            Cull Off
+            CGPROGRAM
+            #include "UnityCG.cginc" 
+            #include "Lighting.cginc"
+            #include "AutoLight.cginc"
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma multi_compile_shadowcaster
+            
+            #ifndef UNITY_PASS_SHADOWCASTER
+                #define UNITY_PASS_SHADOWCASTER
+            #endif
+            
+            struct appdata
+			{
+				float4 vertex : POSITION;
+				float2 uv : TEXCOORD0;
+                float3 normal : NORMAL;
+                float3 tangent : TANGENT;
+			};
+
+			struct v2f
+			{
+                float4 pos : SV_POSITION;
+				float2 uv : TEXCOORD0;
+			};
+
+            #include "Defines.cginc"
+            #include "VertFrag.cginc"
+            ENDCG
+        }
+
 	}
-    Fallback "Diffuse"
 }

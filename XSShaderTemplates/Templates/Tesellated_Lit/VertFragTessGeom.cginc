@@ -1,4 +1,6 @@
-﻿//This file contains the vertex, fragment, and Geometry functions for both the ForwardBase and Forward Add pass.
+#include "Tessellation.cginc"
+
+//This file contains the vertex, fragment, and Geometry functions for both the ForwardBase and Forward Add pass.
 #if defined(SHADOWS_CUBE) && !defined(SHADOWS_CUBE_IN_DEPTH_TEX)
 #define V2F_SHADOW_CASTER_NOPOS float3 vec : TEXCOORD0;
 #define TRANSFER_SHADOW_CASTER_NOPOS_GEOMETRY(o,opos) o.vec = mul(unity_ObjectToWorld, v[i].vertex).xyz - _LightPositionRange.xyz; opos = o.pos;
@@ -9,25 +11,13 @@
         opos = UnityApplyLinearShadowBias(opos);
 #endif
 
-v2g vert (appdata v)
-{
-    v2g o = (v2g)0;
-    o.vertex = v.vertex;
-    o.uv = v.uv;
-    o.normal = v.normal;
-    o.tangent = v.tangent;
-
-    return o;
-}
-
 [maxvertexcount(3)]
-void geom(triangle v2g v[3], inout TriangleStream<g2f> tristream)
+void geom(triangle vertexOutput v[3], inout TriangleStream<g2f> tristream)
 {
     g2f o = (g2f)0;
 
     for (int i = 0; i < 3; i++)
     {
-        v[i].vertex.xyz += _VertexOffset * v[i].normal;
         o.pos = UnityObjectToClipPos(v[i].vertex);
         o.uv = TRANSFORM_TEX(v[i].uv, _MainTex);
         
@@ -45,11 +35,12 @@ void geom(triangle v2g v[3], inout TriangleStream<g2f> tristream)
         #else
         TRANSFER_SHADOW_CASTER_NOPOS_GEOMETRY(o, o.pos);
         #endif
+
         tristream.Append(o);
     }
     tristream.RestartStrip();
 }
-			
+
 fixed4 frag (g2f i) : SV_Target
 {
     //Return only this if in the shadowcaster
@@ -59,6 +50,7 @@ fixed4 frag (g2f i) : SV_Target
 
     //LIGHTING PARAMS
     UNITY_LIGHT_ATTENUATION(attenuation, i, i.worldPos.xyz);
+
     float3 lightDir = getLightDir(i.worldPos);
     float4 lightCol = _LightColor0;
 

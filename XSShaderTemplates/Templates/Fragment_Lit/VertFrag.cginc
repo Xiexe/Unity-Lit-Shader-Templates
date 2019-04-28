@@ -9,17 +9,27 @@ v2f vert (appdata v)
 
     o.pos = UnityObjectToClipPos(v.vertex);
     o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+    
+    #if !defined(UNITY_PASS_SHADOWCASTER)
     o.btn[0] = bitangent;
     o.btn[1] = tangent;
     o.btn[2] = worldNormal;
     o.worldPos = mul(unity_ObjectToWorld, v.vertex);
-
     UNITY_TRANSFER_SHADOW(o, o.uv);
+    #else
+    TRANSFER_SHADOW_CASTER_NOPOS(o, o.pos);
+    #endif
+
     return o;
 }
 			
 fixed4 frag (v2f i) : SV_Target
 {
+    //Return only this if in the shadowcaster
+    #if defined(UNITY_PASS_SHADOWCASTER)
+        SHADOW_CASTER_FRAGMENT(i);
+    #else
+
     //LIGHTING PARAMS
     UNITY_LIGHT_ATTENUATION(attenuation, i, i.worldPos.xyz);
     float3 lightDir = getLightDir(i.worldPos);
@@ -64,4 +74,6 @@ fixed4 frag (v2f i) : SV_Target
 
     float4 col = lighting.xyzz;
     return col;
+    
+    #endif
 }

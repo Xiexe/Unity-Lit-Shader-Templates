@@ -1,0 +1,150 @@
+Shader "Template/Tessellated" 
+{
+    Properties
+    {
+        [Header(MAIN)]
+        _MainTex ("Main Texture", 2D) = "white" {}
+        _Color ("Color", Color) = (1,1,1,1)
+
+        [Space(16)]
+        [Header(NORMALS)]
+        _BumpMap("Normal Map", 2D) = "bump" {}
+        _BumpScale("Normal Scale", Range(-1,1)) = 1
+        
+        [Space(16)]
+        [Header(METALLIC)]
+        _MetallicGlossMap("Metallic Map", 2D) = "white" {}
+        _Metallic("Metallic", Range(0,1)) = 0
+        _Glossiness("Smoothness", Range(0,1)) = 0
+
+        [Space(16)]
+        [Header(GEOMETRYTESSELLATION SETTINGS)]
+        [Enum(Uniform, 0, Edge Length, 1, Distance, 2)]_TessellationMode("Tessellation Mode", Int) = 1
+        _TessellationUniform("Tessellation Factor", Range(0,1)) = 0.05
+    }
+
+    SubShader 
+    {
+        Tags { "RenderType"="Opaque" "Queue"="Geometry" }
+    
+        Pass 
+        {  
+            Tags{"LightMode"="ForwardBase"} 
+            
+            CGPROGRAM
+            #include "UnityCG.cginc"
+            #include "AutoLight.cginc"
+            #include "Lighting.cginc"
+            #pragma vertex vert
+            #pragma hull hull
+            #pragma domain domain
+            #pragma fragment frag
+            #pragma multi_compile_fwdbase 
+
+            #ifndef UNITY_PASS_FORWARDBASE
+                #define UNITY_PASS_FORWARDBASE
+            #endif
+
+            #pragma target 4.6
+
+            struct vertexInput {
+                float4 vertex : POSITION;
+                float2 uv : TEXCOORD0;
+                float3 normal : NORMAL;
+                float3 tangent : TANGENT;
+            };
+
+            struct vertexOutput {
+                float4 pos : SV_POSITION;
+                float2 uv : TEXCOORD0;
+                float3 btn[3] : TEXCOORD1; //2 3;
+                float4 worldPos : TEXCOORD4;
+                SHADOW_COORDS(5)
+            };
+            
+            #include "Defines.cginc"
+            #include "LightingFunctions.cginc"
+            #include "VertFragTess.cginc"
+            ENDCG
+        }
+
+        Pass 
+        {  
+            Tags{"LightMode"="ForwardAdd"} 
+            Blend One One
+            ZWrite Off
+            CGPROGRAM
+            #include "UnityCG.cginc"
+            #include "AutoLight.cginc"
+            #include "Lighting.cginc"
+            #pragma vertex vert
+            #pragma hull hull
+            #pragma domain domain
+            #pragma fragment frag
+            #pragma multi_compile_fwdadd_fullshadows
+
+            #ifndef UNITY_PASS_FORWARDADD
+                #define UNITY_PASS_FORWARDADD
+            #endif
+
+            #pragma target 4.6
+
+            struct vertexInput {
+                float4 vertex : POSITION;
+                float2 uv : TEXCOORD0;
+                float3 normal : NORMAL;
+                float3 tangent : TANGENT;
+            };
+
+            struct vertexOutput {
+                float4 pos : SV_POSITION;
+                float2 uv : TEXCOORD0;
+                float3 btn[3] : TEXCOORD1; //2 3;
+                float4 worldPos : TEXCOORD4;
+                SHADOW_COORDS(5)
+            };
+      
+            #include "Defines.cginc"
+            #include "LightingFunctions.cginc"
+            #include "VertFragTess.cginc"
+            ENDCG
+        }
+
+        Pass 
+        {  
+            Tags{"LightMode"="ShadowCaster"} 
+            CGPROGRAM
+            #include "UnityCG.cginc"
+            #include "AutoLight.cginc"
+            #include "Lighting.cginc"
+            #pragma vertex vert
+            #pragma hull hull
+            #pragma domain domain
+            #pragma fragment frag
+            #pragma multi_compile_shadowcaster
+            
+            #ifndef UNITY_PASS_SHADOWCASTER
+                #define UNITY_PASS_SHADOWCASTER
+            #endif
+
+            #pragma target 4.6
+
+            struct vertexInput {
+                float4 vertex : POSITION;
+                float2 uv : TEXCOORD0;
+                float3 normal : NORMAL;
+                float3 tangent : TANGENT;
+            };
+
+            struct vertexOutput {
+                float4 pos : SV_POSITION;
+                float2 uv : TEXCOORD0;
+            };
+            
+            #include "Defines.cginc"
+            #include "LightingFunctions.cginc"
+            #include "VertFragTess.cginc"
+            ENDCG
+        }
+    }
+}

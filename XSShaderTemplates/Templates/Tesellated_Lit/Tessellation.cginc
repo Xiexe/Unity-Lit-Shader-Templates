@@ -45,29 +45,9 @@ vertexInput vert(vertexInput v)
 	return v;
 }
 
-
 vertexOutput tessVert(vertexInput v)
 {
-    vertexOutput o = (vertexOutput)0;
-    o.pos = UnityObjectToClipPos(v.vertex);
-    o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-    
-    //Only pass needed things through for shadow caster
-    #if !defined(UNITY_PASS_SHADOWCASTER)
-    float3 worldNormal = UnityObjectToWorldNormal(v.normal);
-    float3 tangent = UnityObjectToWorldDir(v.tangent);
-    float3 bitangent = cross(tangent, worldNormal);
-    
-    o.btn[0] = bitangent;
-    o.btn[1] = tangent;
-    o.btn[2] = worldNormal;
-    o.worldPos = mul(unity_ObjectToWorld, v.vertex);
-    UNITY_TRANSFER_SHADOW(o, o.uv);
-    #else
-    TRANSFER_SHADOW_CASTER_NOPOS(o, o.pos);
-    #endif
-
-	return o;
+	return v;
 }
 
 float TessEdgeFactor(float3 p0, float3 p1)
