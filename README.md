@@ -5,7 +5,8 @@ They will get added under the "Create/Shaders/Custom" menu when right clicking i
 The currently supported templates are:
 - Vertex Fragment Shaders
 - Geometry Shaders
+- Tessellated Geometry Shaders
 
 The planned next templates are:
 - Tessellated Shaders
-- Tessellated Geometry Shaders
+
