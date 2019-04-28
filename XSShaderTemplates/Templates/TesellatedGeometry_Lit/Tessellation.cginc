@@ -23,7 +23,7 @@ float TessEdgeFactor(float3 p0, float3 p1)
 
 	float3 edgeCenter = (p0 + p1) * 0.5;
 	float viewDistance = distance(edgeCenter, _WorldSpaceCameraPos);
-    float tessFactor = lerp(1, 0, _TessellationUniform) * 100;
+    float tessFactor = lerp(1, 0, _TessellationUniform) * 50;
 	return edgeLength * _ScreenParams.y / (tessFactor * viewDistance) ;
 }
 
@@ -48,7 +48,7 @@ TessellationFactors patchConstantFunction (InputPatch<vertexInput, 3> patch)
     }
     else if(_TessellationMode == 0)
     {
-        _TessellationUniform *= 100;
+        _TessellationUniform *= 50;
         f.edge[0] = _TessellationUniform;
         f.edge[1] = _TessellationUniform;
         f.edge[2] = _TessellationUniform;
@@ -56,7 +56,7 @@ TessellationFactors patchConstantFunction (InputPatch<vertexInput, 3> patch)
     }
     else
     {
-        _TessellationUniform *= 100;
+        _TessellationUniform *= 50;
         f.edge[0] = _TessellationUniform;
         f.edge[1] = _TessellationUniform;
         f.edge[2] = _TessellationUniform;
