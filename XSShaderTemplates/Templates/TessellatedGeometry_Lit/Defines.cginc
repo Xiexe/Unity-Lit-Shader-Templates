@@ -6,4 +6,6 @@ float _Metallic;
 float _Glossiness;
 float _BumpScale;
 float _TessellationUniform;
+float _TessClose;
+float _TessFar;
 int _TessellationMode;

@@ -21,6 +21,8 @@ Shader "Template/Tessellated"
         [Header(GEOMETRYTESSELLATION SETTINGS)]
         [Enum(Uniform, 0, Edge Length, 1, Distance, 2)]_TessellationMode("Tessellation Mode", Int) = 1
         _TessellationUniform("Tessellation Factor", Range(0,1)) = 0.05
+        _TessClose("Tessellation Close", Float) = 10
+        _TessFar("Tessellation Far", Float) = 50
     }
 
     SubShader 

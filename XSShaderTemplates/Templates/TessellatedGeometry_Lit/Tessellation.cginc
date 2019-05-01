@@ -50,6 +50,37 @@ vertexOutput tessVert(vertexInput v)
 	return v;
 }
 
+float UnityCalcDistanceTessFactor (float4 vertex, float minDist, float maxDist, float tess)
+{
+    float3 wpos = vertex.xyz;
+    float dist = distance (wpos, _WorldSpaceCameraPos);
+    float f = clamp(1.0 - (dist - minDist) / (maxDist - minDist), 0.01, 1.0) * tess;
+    return f;
+}
+
+float4 UnityCalcTriEdgeTessFactors (float3 triVertexFactors)
+{
+    float4 tess;
+    tess.x = 0.5 * (triVertexFactors.y + triVertexFactors.z);
+    tess.y = 0.5 * (triVertexFactors.x + triVertexFactors.z);
+    tess.z = 0.5 * (triVertexFactors.x + triVertexFactors.y);
+    tess.w = (triVertexFactors.x + triVertexFactors.y + triVertexFactors.z) / 3.0f;
+    return tess;
+}
+
+// Distance based tessellation:
+// Tessellation level is "tess" before "minDist" from camera, and linearly decreases to 1
+// up to "maxDist" from camera.
+float4 UnityDistanceBasedTess (float4 v0, float4 v1, float4 v2, float minDist, float maxDist, float tess)
+{
+    float3 f;
+    f.x = UnityCalcDistanceTessFactor (v0,minDist,maxDist,tess);
+    f.y = UnityCalcDistanceTessFactor (v1,minDist,maxDist,tess);
+    f.z = UnityCalcDistanceTessFactor (v2,minDist,maxDist,tess);
+
+    return UnityCalcTriEdgeTessFactors (f);
+}
+
 float TessEdgeFactor(float3 p0, float3 p1)
 {
 	float edgeLength = distance(p0, p1);
@@ -63,9 +94,9 @@ float TessEdgeFactor(float3 p0, float3 p1)
 TessellationFactors patchConstantFunction (InputPatch<vertexInput, 3> patch)
 {
 	TessellationFactors f;
-    float3 p0 = mul(unity_ObjectToWorld, patch[0].vertex).xyz;
-    float3 p1 = mul(unity_ObjectToWorld, patch[1].vertex).xyz;
-    float3 p2 = mul(unity_ObjectToWorld, patch[2].vertex).xyz;
+    float4 p0 = mul(unity_ObjectToWorld, patch[0].vertex);
+    float4 p1 = mul(unity_ObjectToWorld, patch[1].vertex);
+    float4 p2 = mul(unity_ObjectToWorld, patch[2].vertex);
     float bias = 0;
     
 
@@ -96,14 +127,12 @@ TessellationFactors patchConstantFunction (InputPatch<vertexInput, 3> patch)
         else
         {
             _TessellationUniform *= 50;
-            f.edge[0] = _TessellationUniform;
-            f.edge[1] = _TessellationUniform;
-            f.edge[2] = _TessellationUniform;
-            f.inside = _TessellationUniform;
+            f.edge[0] = UnityDistanceBasedTess(p0, p1, p2, _TessClose, _TessFar, _TessellationUniform);
+            f.edge[1] = UnityDistanceBasedTess(p0, p1, p2, _TessClose, _TessFar, _TessellationUniform);
+            f.edge[2] = UnityDistanceBasedTess(p0, p1, p2, _TessClose, _TessFar, _TessellationUniform);
+            f.inside = UnityDistanceBasedTess(p0, p1, p2, _TessClose, _TessFar, _TessellationUniform);
         }
     }
-
-
     return f;
 }
 
@@ -111,6 +140,8 @@ TessellationFactors patchConstantFunction (InputPatch<vertexInput, 3> patch)
 [UNITY_outputcontrolpoints(3)]
 [UNITY_outputtopology("triangle_cw")]
 [UNITY_partitioning("fractional_odd")]
+//[UNITY_partitioning("fractional_even")]
+//[UNITY_partitioning("pow2")]
 //[UNITY_partitioning("integer")]
 [UNITY_patchconstantfunc("patchConstantFunction")]
 vertexInput hull (InputPatch<vertexInput, 3> patch, uint id : SV_OutputControlPointID)
