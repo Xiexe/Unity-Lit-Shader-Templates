@@ -127,10 +127,11 @@ TessellationFactors patchConstantFunction (InputPatch<vertexInput, 3> patch)
         else
         {
             _TessellationUniform *= 50;
-            f.edge[0] = UnityDistanceBasedTess(p0, p1, p2, _TessClose, _TessFar, _TessellationUniform);
-            f.edge[1] = UnityDistanceBasedTess(p0, p1, p2, _TessClose, _TessFar, _TessellationUniform);
-            f.edge[2] = UnityDistanceBasedTess(p0, p1, p2, _TessClose, _TessFar, _TessellationUniform);
-            f.inside = UnityDistanceBasedTess(p0, p1, p2, _TessClose, _TessFar, _TessellationUniform);
+            float4 distanceTess = UnityDistanceBasedTess(p0, p1, p2, _TessClose, _TessFar, _TessellationUniform);
+            f.edge[0] = distanceTess;
+            f.edge[1] = distanceTess;
+            f.edge[2] = distanceTess;
+            f.inside = distanceTess;
         }
     }
     return f;
