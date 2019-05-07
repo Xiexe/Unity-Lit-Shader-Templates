@@ -6,7 +6,9 @@ The currently supported templates are:
 - Vertex Fragment Shaders
 - Geometry Shaders
 - Tessellated Geometry Shaders
-
-The planned next templates are:
 - Tessellated Shaders
+
+The planned Features that have no been implemented yet:
+- Lightmapping support
+- Realtime Lightmap support
 
