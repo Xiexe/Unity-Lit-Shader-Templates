@@ -3,6 +3,7 @@ Shader "Template/Tessellated"
     Properties
     {
         [Header(MAIN)]
+        [Enum(Unity Default, 0, Non Linear, 1)]_LightProbeMethod("Light Probe Sampling", Int) = 0
         [Enum(UVs, 0, Triplanar World, 1, Triplanar Object, 2)]_TextureSampleMode("Texture Mode", Int) = 0
 		_TriplanarFalloff("Triplanar Blend", Range(0.5,1)) = 1
         _MainTex ("Main Texture", 2D) = "white" {}
@@ -52,6 +53,7 @@ Shader "Template/Tessellated"
             #pragma geometry geom
             #pragma fragment frag
             #pragma multi_compile_fwdbase 
+            #define GEOMETRY
 
             #ifndef UNITY_PASS_FORWARDBASE
                 #define UNITY_PASS_FORWARDBASE
@@ -91,6 +93,7 @@ Shader "Template/Tessellated"
             
             #include "Defines.cginc"
             #include "LightingFunctions.cginc"
+            #include "LightingBRDF.cginc"
             #include "VertFragTessGeom.cginc"
             ENDCG
         }
@@ -110,6 +113,7 @@ Shader "Template/Tessellated"
             #pragma geometry geom
             #pragma fragment frag
             #pragma multi_compile_fwdadd_fullshadows
+            #define GEOMETRY
 
             #ifndef UNITY_PASS_FORWARDADD
                 #define UNITY_PASS_FORWARDADD
@@ -143,6 +147,7 @@ Shader "Template/Tessellated"
             
             #include "Defines.cginc"
             #include "LightingFunctions.cginc"
+            #include "LightingBRDF.cginc"
             #include "VertFragTessGeom.cginc"
             ENDCG
         }

@@ -13,3 +13,4 @@ float _TriplanarFalloff;
 float _LMStrength;
 float _RTLMStrength;
 int _TextureSampleMode;
+int _LightProbeMethod;

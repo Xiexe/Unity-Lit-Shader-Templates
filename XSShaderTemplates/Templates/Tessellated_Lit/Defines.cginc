@@ -16,3 +16,4 @@ float _LMStrength;
 float _RTLMStrength;
 int _TextureSampleMode;
 int _TessellationMode;
+int _LightProbeMethod;

@@ -6,8 +6,8 @@ Material:
   m_ObjectHideFlags: 0
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
-  m_Name: Template_Fragment_Lit
-  m_Shader: {fileID: 4800000, guid: 1d0c87701e3cc9a41b285e11868e654c, type: 3}
+  m_Name: Material
+  m_Shader: {fileID: 4800000, guid: e705e8061ad347e4fa440cc83646e5e2, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -23,7 +23,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: cbbabe9e292f5604897926494bb38fef, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 5, y: 5}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
@@ -34,6 +34,7 @@ Material:
     - _BumpScale: 1
     - _Glossiness: 0
     - _LMStrength: 1
+    - _LightProbeMethod: 1
     - _Metallic: 0
     - _RTLMStrength: 1
     - _SpecLMOcclusionAdjust: 1
@@ -42,7 +43,7 @@ Material:
     - _TessFar: 50
     - _TessellationMode: 1
     - _TessellationUniform: 0.05
-    - _TextureSampleMode: 1
+    - _TextureSampleMode: 0
     - _TriplanarFalloff: 0.5
     - _VertexOffset: 0
     m_Colors:
