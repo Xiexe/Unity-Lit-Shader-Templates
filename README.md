@@ -19,7 +19,10 @@ Supported Extra Features:
 - Triplanar Mapping in World Space
 - Triplanar Mapping in Object Space
 
+In Progress Features:
+- Linear SH Light Probe sampling
+- Mixed lighting support
+
 The planned Features that have no been implemented yet:
 - Vertex Light support
-- Better Lightprobe sampling as an option
 
