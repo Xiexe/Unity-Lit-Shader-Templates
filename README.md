@@ -12,6 +12,7 @@ Supported Lighting Features:
 - Full Shadow map support
 - Full Baked Lightmap support
 - Directional Lightmap support
+- Realtime Lightmap support
 - Specular Lightmap Occlusion
 
 Supported Extra Features:
@@ -20,4 +21,5 @@ Supported Extra Features:
 
 The planned Features that have no been implemented yet:
 - Vertex Light support
+- Better Lightprobe sampling as an option
 
