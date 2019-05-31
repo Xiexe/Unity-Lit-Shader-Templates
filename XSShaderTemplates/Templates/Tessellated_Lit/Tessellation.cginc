@@ -51,6 +51,11 @@ vertexOutput tessVert(vertexInput v)
     vertexOutput o = (vertexOutput)0;
     o.pos = UnityObjectToClipPos(v.vertex);
     o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+
+    #if defined(UNITY_PASS_FORWARDBASE)
+    o.uv1 = v.uv1;
+    o.uv2 = v.uv2;
+    #endif
     
     //Only pass needed things through for shadow caster
     #if !defined(UNITY_PASS_SHADOWCASTER)
@@ -62,6 +67,8 @@ vertexOutput tessVert(vertexInput v)
     o.btn[1] = tangent;
     o.btn[2] = worldNormal;
     o.worldPos = mul(unity_ObjectToWorld, v.vertex);
+    o.objPos = v.vertex;
+    o.objNormal = v.normal;
     UNITY_TRANSFER_SHADOW(o, o.uv);
     #else
     TRANSFER_SHADOW_CASTER_NOPOS(o, o.pos);
@@ -183,9 +190,16 @@ vertexOutput domain(TessellationFactors factors, OutputPatch<vertexInput, 3> pat
 
 	DOMAIN_INTERPOLATE(vertex)
     DOMAIN_INTERPOLATE(uv)
+    #if defined(UNITY_PASS_FORWARDBASE)
+        DOMAIN_INTERPOLATE(uv1)
+        DOMAIN_INTERPOLATE(uv2)
+    #endif
 	DOMAIN_INTERPOLATE(normal)
 	DOMAIN_INTERPOLATE(tangent)
-    
+    // #if !defined(UNITY_PASS_SHADOWCASTER)
+    //     DOMAIN_INTERPOLATE(objPos)
+    //     DOMAIN_INTERPOLATE(objNormal)
+    // #endif
 
 	return tessVert(v);
 }

@@ -8,4 +8,11 @@ float _BumpScale;
 float _TessellationUniform;
 float _TessClose;
 float _TessFar;
+
+float _SpecularLMOcclusion;
+float _SpecLMOcclusionAdjust;
+float _TriplanarFalloff;
+float _LMStrength;
+float _RTLMStrength;
+int _TextureSampleMode;
 int _TessellationMode;

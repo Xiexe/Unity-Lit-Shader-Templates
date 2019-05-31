@@ -162,9 +162,12 @@ vertexOutput domain(TessellationFactors factors, OutputPatch<vertexInput, 3> pat
 
 	DOMAIN_INTERPOLATE(vertex)
     DOMAIN_INTERPOLATE(uv)
+    #if defined(UNITY_PASS_FORWARDBASE)
+        DOMAIN_INTERPOLATE(uv1)
+        DOMAIN_INTERPOLATE(uv2)
+    #endif
 	DOMAIN_INTERPOLATE(normal)
 	DOMAIN_INTERPOLATE(tangent)
-    
 
 	return tessVert(v);
 }

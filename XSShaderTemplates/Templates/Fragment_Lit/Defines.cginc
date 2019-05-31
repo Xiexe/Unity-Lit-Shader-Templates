@@ -5,4 +5,10 @@ float4 _Color;
 float _Metallic;
 float _Glossiness;
 float _BumpScale;
-float _VertexOffset;
+
+float _SpecularLMOcclusion;
+float _SpecLMOcclusionAdjust;
+float _TriplanarFalloff;
+float _LMStrength;
+float _RTLMStrength;
+int _TextureSampleMode;

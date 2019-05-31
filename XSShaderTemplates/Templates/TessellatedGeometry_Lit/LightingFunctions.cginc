@@ -24,7 +24,8 @@ float3 getReflectionUV(float3 direction, float3 position, float4 cubemapPosition
 
 half3 getIndirectSpecular(float3 worldPos, float3 diffuseColor, float vdn, float4 metallicSmoothness, half3 reflDir, half3 indirectLight, float3 viewDir, float3 lighting)
 {	//This function handls Unity style reflections, Matcaps, and a baked in fallback cubemap.
-		half3 spec = half3(0,0,0);
+	half3 spec = half3(0,0,0);
+    #if defined(UNITY_PASS_FORWARDBASE)
         float3 reflectionUV1 = getReflectionUV(reflDir, worldPos, unity_SpecCube0_ProbePosition, unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax);
         half4 probe0 = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectionUV1, metallicSmoothness.w * 6);
         half3 probe0sample = DecodeHDR(probe0, unity_SpecCube0_HDR);
@@ -48,6 +49,12 @@ half3 getIndirectSpecular(float3 worldPos, float3 diffuseColor, float vdn, float
         half3 metallicColor = indirectSpecular * lerp(0.05,diffuseColor.rgb, metallicSmoothness.x);
         spec = lerp(indirectSpecular, metallicColor, pow(vdn, 0.05));
 		spec = lerp(spec, spec * lighting, metallicSmoothness.w); // should only not see shadows on a perfect mirror.
+        
+        #if defined(LIGHTMAP_ON)
+            float specMultiplier = max(0, lerp(1, pow(length(lighting), _SpecLMOcclusionAdjust), _SpecularLMOcclusion));
+            spec *= specMultiplier;
+        #endif
+    #endif
 	return spec;
 }
 
@@ -58,28 +65,52 @@ half3 getDirectSpecular(half4 lightCol, half3 diffuseColor, half4 metallicSmooth
 	
     half3 specularReflection = saturate(pow(rdv, smoothness * 128)) * lightCol;
 	specularReflection = lerp(specularReflection, specularReflection * diffuseColor, metallicSmoothness.x);
-
-    specularReflection *= smoothness;
-    specularReflection *= 5; //Artificially brighten to be as bright as standard
+    specularReflection *= lerp(0,5, smoothness * 0.05); //Artificially brighten to be as bright as standard
     return specularReflection * atten;
 }
 
-float3 getNormal(float4 normalMap, float3 bitangent, float3 tangent, float3 worldNormal)
+float3 getNormal(float3 normalMap, float3 bitangent, float3 tangent, float3 worldNormal)
 {
     half3 tspace0 = half3(tangent.x, bitangent.x, worldNormal.x);
 	half3 tspace1 = half3(tangent.y, bitangent.y, worldNormal.y);
 	half3 tspace2 = half3(tangent.z, bitangent.z, worldNormal.z);
 
-	half3 nMap = UnpackNormal(normalMap);
+	half3 nMap = normalMap;
 	nMap.xy *= _BumpScale;
 
 	half3 calcedNormal;
 	calcedNormal.x = dot(tspace0, nMap);
 	calcedNormal.y = dot(tspace1, nMap);
 	calcedNormal.z = dot(tspace2, nMap);
-	
-	calcedNormal = normalize(calcedNormal);
-    return calcedNormal;
+
+    return normalize(calcedNormal);
+}
+
+half3 getRealtimeLightmap(float2 uv, float3 worldNormal)
+{
+    float2 realtimeUV = uv * unity_DynamicLightmapST.xy + unity_DynamicLightmapST.zw;
+    float4 bakedCol = UNITY_SAMPLE_TEX2D(unity_DynamicLightmap, realtimeUV);
+    float3 realtimeLightmap = DecodeRealtimeLightmap(bakedCol);
+
+    #ifdef DIRLIGHTMAP_COMBINED
+        half4 realtimeDirTex = UNITY_SAMPLE_TEX2D_SAMPLER(unity_DynamicDirectionality, unity_DynamicLightmap, realtimeUV);
+        realtimeLightmap += DecodeDirectionalLightmap (realtimeLightmap, realtimeDirTex, worldNormal);
+    #endif
+    
+    return realtimeLightmap * _RTLMStrength;
+}
+
+half3 getLightmap(float2 uv, float3 worldNormal, float3 worldPos)
+{
+    float2 lightmapUV = uv * unity_LightmapST.xy + unity_LightmapST.zw;
+    half4 bakedColorTex = UNITY_SAMPLE_TEX2D(unity_Lightmap, lightmapUV);
+    half3 lightMap = DecodeLightmap(bakedColorTex);
+    
+    #ifdef DIRLIGHTMAP_COMBINED
+        fixed4 bakedDirTex = UNITY_SAMPLE_TEX2D_SAMPLER (unity_LightmapInd, unity_Lightmap, lightmapUV);
+        lightMap = DecodeDirectionalLightmap(lightMap, bakedDirTex, worldNormal);
+    #endif
+    return lightMap * _LMStrength;
 }
 
 half3 getLightDir(float3 worldPos)
@@ -97,4 +128,55 @@ half3 getLightDir(float3 worldPos)
 		#endif
 
 	return normalize(lightDir);
+}
+
+
+
+//Triplanar map a texture (Object or World space), or sample it normally.
+float4 texTP( sampler2D tex, float4 tillingOffset, float3 worldPos, float3 objPos, float3 worldNormal, float3 objNormal, float falloff, float2 uv)
+{
+	if(_TextureSampleMode != 0){
+        
+        worldPos = lerp(worldPos, objPos, _TextureSampleMode - 1);
+        worldNormal = lerp(worldNormal, objNormal, _TextureSampleMode - 1);
+        
+        float3 projNormal = pow(abs(worldNormal),falloff);
+        projNormal /= projNormal.x + projNormal.y + projNormal.z;
+        float3 nsign = sign(worldNormal);
+        half4 xNorm; half4 yNorm; half4 zNorm;
+        xNorm = tex2D( tex, tillingOffset.xy * worldPos.zy * float2( nsign.x, 1.0 ) + tillingOffset.zw);
+        yNorm = tex2D( tex, tillingOffset.xy * worldPos.xz * float2( nsign.y, 1.0 ) + tillingOffset.zw);
+        zNorm = tex2D( tex, tillingOffset.xy * worldPos.xy * float2( -nsign.z, 1.0 ) + tillingOffset.zw);
+
+        return xNorm * projNormal.x + yNorm * projNormal.y + zNorm * projNormal.z;
+    }
+    else{
+        return tex2D(tex, uv);
+    } 
+}
+//same as above but for normal maps
+float3 texTPNorm( sampler2D tex, float4 tillingOffset, float3 worldPos, float3 objPos, float3 worldNormal, float3 objNormal, float falloff, float2 uv)
+{
+    if(_TextureSampleMode != 0){
+        
+        worldPos = lerp(worldPos, objPos, _TextureSampleMode - 1);
+        worldNormal = lerp(worldNormal, objNormal, _TextureSampleMode - 1);
+
+        float3 projNormal = pow(abs(worldNormal), falloff);
+        projNormal /= projNormal.x + projNormal.y + projNormal.z;
+        float3 nsign = sign(worldNormal);
+        half4 xNorm; half4 yNorm; half4 zNorm;
+        xNorm = tex2D( tex, tillingOffset.xy * worldPos.zy * float2( nsign.x, 1.0 ) + tillingOffset.zw);
+        yNorm = tex2D( tex, tillingOffset.xy * worldPos.xz * float2( nsign.y, 1.0 ) + tillingOffset.zw);
+        zNorm = tex2D( tex, tillingOffset.xy * worldPos.xy * float2( -nsign.z, 1.0 ) + tillingOffset.zw);
+
+        xNorm.xyz = UnpackNormal(xNorm);
+        yNorm.xyz = UnpackNormal(yNorm);
+        zNorm.xyz = UnpackNormal(zNorm);
+		
+        return (xNorm.xyz * projNormal.x + yNorm.xyz * projNormal.y + zNorm.xyz * projNormal.z);
+    }
+    else{
+        return UnpackNormal(tex2D(tex, uv));
+    }
 }
