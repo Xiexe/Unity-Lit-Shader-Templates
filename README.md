@@ -8,7 +8,16 @@ The currently supported templates are:
 - Tessellated Geometry Shaders
 - Tessellated Shaders
 
+Supported Lighting Features:
+- Full Shadow map support
+- Full Baked Lightmap support
+- Directional Lightmap support
+- Specular Lightmap Occlusion
+
+Supported Extra Features:
+- Triplanar Mapping in World Space
+- Triplanar Mapping in Object Space
+
 The planned Features that have no been implemented yet:
-- Lightmapping support
-- Realtime Lightmap support
+- Vertex Light support
 
