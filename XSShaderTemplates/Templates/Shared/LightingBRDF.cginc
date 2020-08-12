@@ -1,7 +1,7 @@
 ﻿//Since this is shared, and the output structs/input structs are all slightly differently named in each shader template, just handle them all here.
 float4 CustomStandardLightingBRDF(
     #if defined(GEOMETRY)
-        v2f i
+        g2f i
     #elif defined(TESSELLATION)
         vertexOutput i
     #else
