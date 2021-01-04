@@ -4,7 +4,7 @@ v2f vert (appdata v)
 {
     v2f o;
     float3 worldNormal = UnityObjectToWorldNormal(v.normal);
-    float3 tangent = UnityObjectToWorldDir(v.tangent);
+    float3 tangent = UnityObjectToWorldDir(v.tangent) * v.tangent.w;
     float3 bitangent = cross(tangent, worldNormal);
 
     o.pos = UnityObjectToClipPos(v.vertex);

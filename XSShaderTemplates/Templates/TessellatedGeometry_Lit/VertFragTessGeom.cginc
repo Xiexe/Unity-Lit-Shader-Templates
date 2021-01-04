@@ -6,8 +6,8 @@
 #define TRANSFER_SHADOW_CASTER_NOPOS_GEOMETRY(o,opos) o.vec = mul(unity_ObjectToWorld, v[i].vertex).xyz - _LightPositionRange.xyz; opos = o.pos;
 #else
 #define V2F_SHADOW_CASTER_NOPOS
-#define TRANSFER_SHADOW_CASTER_NOPOS_GEOMETRY(o,opos) \
-        opos = UnityClipSpaceShadowCasterPos(v[i].vertex, v[i].normal); \
+#define TRANSFER_SHADOW_CASTER_NOPOS_GEOMETRY(o, opos, vertexPosition, vertexNormal) \
+        opos = UnityClipSpaceShadowCasterPos(vertexPosition, vertexNormal); \
         opos = UnityApplyLinearShadowBias(opos);
 #endif
 
@@ -28,7 +28,7 @@ void geom(triangle vertexOutput v[3], inout TriangleStream<g2f> tristream)
         //Only pass needed things through for shadow caster
         #if !defined(UNITY_PASS_SHADOWCASTER)
         float3 worldNormal = UnityObjectToWorldNormal(v[i].normal);
-        float3 tangent = UnityObjectToWorldDir(v[i].tangent);
+        float3 tangent = UnityObjectToWorldDir(v[i].tangent) * v[i].tangent.w;
         float3 bitangent = cross(tangent, worldNormal);
 
         o.btn[0] = bitangent;
@@ -39,7 +39,7 @@ void geom(triangle vertexOutput v[3], inout TriangleStream<g2f> tristream)
         o.objNormal = v[i].normal;
         UNITY_TRANSFER_SHADOW(o, o.uv);
         #else
-        TRANSFER_SHADOW_CASTER_NOPOS_GEOMETRY(o, o.pos);
+        TRANSFER_SHADOW_CASTER_NOPOS_GEOMETRY(o, o.pos, v[i].vertex, v[i].normal);
         #endif
 
         tristream.Append(o);

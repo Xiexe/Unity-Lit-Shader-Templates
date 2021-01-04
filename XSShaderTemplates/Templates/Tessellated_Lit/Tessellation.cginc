@@ -60,7 +60,7 @@ vertexOutput tessVert(vertexInput v)
     //Only pass needed things through for shadow caster
     #if !defined(UNITY_PASS_SHADOWCASTER)
     float3 worldNormal = UnityObjectToWorldNormal(v.normal);
-    float3 tangent = UnityObjectToWorldDir(v.tangent);
+    float3 tangent = UnityObjectToWorldDir(v.tangent) * v.tangent.w;
     float3 bitangent = cross(tangent, worldNormal);
     
     o.btn[0] = bitangent;

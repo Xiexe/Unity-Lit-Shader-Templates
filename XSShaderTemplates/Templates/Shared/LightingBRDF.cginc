@@ -15,7 +15,7 @@ float4 CustomStandardLightingBRDF(
     float4 lightCol = _LightColor0;
 
     //NORMAL
-    float3 normalMap = texTPNorm(_BumpMap, _MainTex_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
+    float4 normalMap = texTP(_BumpMap, _MainTex_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
     float3 worldNormal = getNormal(normalMap, i.btn[0], i.btn[1], i.btn[2]);
 
     //METALLIC SMOOTHNESS

@@ -69,14 +69,13 @@ half3 getDirectSpecular(half4 lightCol, half3 diffuseColor, half4 metallicSmooth
     return specularReflection * atten;
 }
 
-float3 getNormal(float3 normalMap, float3 bitangent, float3 tangent, float3 worldNormal)
+float3 getNormal(float4 normalMap, float3 bitangent, float3 tangent, float3 worldNormal)
 {
     half3 tspace0 = half3(tangent.x, bitangent.x, worldNormal.x);
 	half3 tspace1 = half3(tangent.y, bitangent.y, worldNormal.y);
 	half3 tspace2 = half3(tangent.z, bitangent.z, worldNormal.z);
 
-	half3 nMap = normalMap;
-	nMap.xy *= _BumpScale;
+	half3 nMap = UnpackScaleNormal(normalMap, _BumpScale);
 
 	half3 calcedNormal;
 	calcedNormal.x = dot(tspace0, nMap);
@@ -130,8 +129,6 @@ half3 getLightDir(float3 worldPos)
 	return normalize(lightDir);
 }
 
-
-
 //Triplanar map a texture (Object or World space), or sample it normally.
 float4 texTP( sampler2D tex, float4 tillingOffset, float3 worldPos, float3 objPos, float3 worldNormal, float3 objNormal, float falloff, float2 uv)
 {
@@ -153,32 +150,6 @@ float4 texTP( sampler2D tex, float4 tillingOffset, float3 worldPos, float3 objPo
     else{
         return tex2D(tex, uv);
     } 
-}
-//same as above but for normal maps
-float3 texTPNorm( sampler2D tex, float4 tillingOffset, float3 worldPos, float3 objPos, float3 worldNormal, float3 objNormal, float falloff, float2 uv)
-{
-    if(_TextureSampleMode != 0){
-        
-        worldPos = lerp(worldPos, objPos, _TextureSampleMode - 1);
-        worldNormal = lerp(worldNormal, objNormal, _TextureSampleMode - 1);
-
-        float3 projNormal = pow(abs(worldNormal), falloff);
-        projNormal /= projNormal.x + projNormal.y + projNormal.z;
-        float3 nsign = sign(worldNormal);
-        half4 xNorm; half4 yNorm; half4 zNorm;
-        xNorm = tex2D( tex, tillingOffset.xy * worldPos.zy * float2( nsign.x, 1.0 ) + tillingOffset.zw);
-        yNorm = tex2D( tex, tillingOffset.xy * worldPos.xz * float2( nsign.y, 1.0 ) + tillingOffset.zw);
-        zNorm = tex2D( tex, tillingOffset.xy * worldPos.xy * float2( -nsign.z, 1.0 ) + tillingOffset.zw);
-
-        xNorm.xyz = UnpackNormal(xNorm);
-        yNorm.xyz = UnpackNormal(yNorm);
-        zNorm.xyz = UnpackNormal(zNorm);
-		
-        return (xNorm.xyz * projNormal.x + yNorm.xyz * projNormal.y + zNorm.xyz * projNormal.z);
-    }
-    else{
-        return UnpackNormal(tex2D(tex, uv));
-    }
 }
 
 float shEvaluateDiffuseL1Geomerics(float L0, float3 L1, float3 n)
@@ -204,6 +175,7 @@ float shEvaluateDiffuseL1Geomerics(float L0, float3 L1, float3 n)
     // dynamic range constant
     // should vary between 4 (highly directional) and 0 (ambient)
     float a = (1.0f - lenR1 / R0) / (1.0f + lenR1 / R0);
-
-    return R0 * (a + (1.0f - a) * (p + 1.0f) * pow(q, p));
+    
+    float g1 = R0 * (a + (1.0f - a) * (p + 1.0f) * pow(q, p));
+    return max(0, g1);
 }
