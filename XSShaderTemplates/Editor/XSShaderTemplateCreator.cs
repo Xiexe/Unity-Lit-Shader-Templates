@@ -3,16 +3,19 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System.IO;
+using System.Linq;
 
-public class XSShaderTemplateCreator 
+public class XSShaderTemplateCreator
 {
     private static string createPath = "";
     private static string templatePath = "";
     private static string lightingBRDFPath = "";
     private static string lightingFunctionsPath = "";
+    private static string defines = "";
+    private static string propertiesBlockPath = "";
 
-    private static List<string> templateShaders = new List<string>{ "/Fragment_Lit", "/Geometry_Lit", "/Tessellated_Lit", "/TessellatedGeometry_Lit" };
-    private static List<string> newShaders = new List<string>{ "/New_Fragment_Lit", "/New_Geometry_Lit", "/New_Tessellated_Lit", "/New_TessellatedGeometry_Lit" };
+    private static List<string> templateShaders = new List<string> { "/Fragment_Lit", "/Geometry_Lit", "/Tessellated_Lit", "/TessellatedGeometry_Lit" };
+    private static List<string> newShaders = new List<string> { "/New_Fragment_Lit", "/New_Geometry_Lit", "/New_Tessellated_Lit", "/New_TessellatedGeometry_Lit" };
 
     [MenuItem("Assets/Create/Shader/Custom/Fragment_Lit")]
     private static void CreateShaderFragLit()
@@ -42,8 +45,8 @@ public class XSShaderTemplateCreator
     {
         getTemplatePath();
 
-        if(IsAssetAFolder(Selection.activeObject))
-        {   
+        if (IsAssetAFolder(Selection.activeObject))
+        {
             Create(index);
             Debug.Log("Created at " + createPath);
         }
@@ -54,26 +57,46 @@ public class XSShaderTemplateCreator
 
             Create(index);
             Debug.Log("Created at " + createPath);
-        }  
+        }
     }
 
     //Creates file and renames the shader to the correct name
     private static void Create(int index)
-    {   
+    {
         string shaderIndex = createPath + newShaders[index];
         //Copy files to new directory
         FileUtil.CopyFileOrDirectory(templatePath + templateShaders[index], shaderIndex);
         AssetDatabase.Refresh();
-        
+
         //Derive the file name from the folder name.
         string dest = shaderIndex + templateShaders[index] + ".txt";
-        string final =  shaderIndex + templateShaders[index] + ".shader";
+        string final = shaderIndex + templateShaders[index] + ".shader";
         //Path for Shared CGINC
         string finalBRDF = shaderIndex + "/LightingBRDF.cginc";
         string finalFunc = shaderIndex + "/LightingFunctions.cginc";
+        string finalDefines = shaderIndex + "/Defines.cginc";
 
-        string[] lines = File.ReadAllLines(dest);
+        List<string> shaderProperties = File.ReadAllLines(propertiesBlockPath).ToList();
+        List<string> lines = File.ReadAllLines(dest).ToList();
         lines[0] = "Shader " + "\"Custom" + templateShaders[index] + "\"";
+        for (int i = 0; i < lines.Count; i++)
+        {
+            if (lines[i].Contains("$PROPERTIES"))
+            {
+                bool hasTess = lines[i].Contains("#TESS");
+                bool hasGeom = lines[i].Contains("#GEOM");
+
+                lines.RemoveAt(i);
+                for (int x = 0; x < shaderProperties.Count; x++)
+                {
+                    string shaderPropertiesLine = shaderProperties[x];
+                    if ((shaderPropertiesLine.Contains("#TESS!") && hasTess) || (shaderPropertiesLine.Contains("#GEOM!") && hasGeom))
+                        shaderPropertiesLine = shaderPropertiesLine.Substring(shaderPropertiesLine.LastIndexOf('!') + 1);
+
+                    lines.Insert(i + x, $"        {shaderPropertiesLine}");
+                }
+            }
+        }
         File.WriteAllLines(dest, lines);
 
         //Move main Files
@@ -81,6 +104,7 @@ public class XSShaderTemplateCreator
         //Move Shared CGINCs
         FileUtil.CopyFileOrDirectory(lightingBRDFPath, finalBRDF);
         FileUtil.CopyFileOrDirectory(lightingFunctionsPath, finalFunc);
+        FileUtil.CopyFileOrDirectory(defines, finalDefines);
 
         AssetDatabase.Refresh();
     }
@@ -98,10 +122,12 @@ public class XSShaderTemplateCreator
         templatePath += "/Templates";
         lightingBRDFPath = templatePath + "/Shared/LightingBRDF.cginc";
         lightingFunctionsPath = templatePath + "/Shared/LightingFunctions.cginc";
+        propertiesBlockPath = templatePath + "/Shared/Properties.txt";
+        defines = templatePath + "/Shared/Defines.cginc";
     }
 
     private static bool IsAssetAFolder(Object obj)
-    {   
+    {
         if (obj == null)
             return false;
 
@@ -118,7 +144,7 @@ public class XSShaderTemplateCreator
                 return false;
             }
         }
- 
+
         return false;
     }
 }

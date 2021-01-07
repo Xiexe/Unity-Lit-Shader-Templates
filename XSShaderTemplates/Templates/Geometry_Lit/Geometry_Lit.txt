@@ -2,34 +2,7 @@
 {
 	Properties
 	{
-        [Header(MAIN)]
-        [Enum(Unity Default, 0, Non Linear, 1)]_LightProbeMethod("Light Probe Sampling", Int) = 0
-        [Enum(UVs, 0, Triplanar World, 1, Triplanar Object, 2)]_TextureSampleMode("Texture Mode", Int) = 0
-		_TriplanarFalloff("Triplanar Blend", Range(0.5,1)) = 1
-		_MainTex ("Main Texture", 2D) = "white" {}
-        _Color ("Color", Color) = (1,1,1,1)
-
-        [Space(16)]
-        [Header(NORMALS)]
-        _BumpMap("Normal Map", 2D) = "bump" {}
-        _BumpScale("Normal Scale", Range(-1,1)) = 1
-        
-        [Space(16)]
-        [Header(METALLIC)]
-        _MetallicGlossMap("Metallic Map", 2D) = "white" {}
-        _Metallic("Metallic", Range(0,1)) = 0
-        _Glossiness("Smoothness", Range(0,1)) = 0
-
-        [Space(16)]
-        [Header(GEOMETRY SETTINGS)]
-        _VertexOffset("Face Offset", float) = 0
-
-        [Space(16)]
-        [Header(LIGHTMAPPING HACKS)]
-        _SpecularLMOcclusion("Specular Occlusion", Range(0,1)) = 0
-        _SpecLMOcclusionAdjust("Spec Occlusion Sensitiviy", Range(0,1)) = 0.2
-        _LMStrength("Lightmap Strength", Range(0,1)) = 1
-        _RTLMStrength("Realtime Lightmap Strength", Range(0,1)) = 1
+        $PROPERTIES#GEOM
     }
 	SubShader
 	{
@@ -42,6 +15,7 @@
 			#pragma vertex vert
             #pragma geometry geom
 			#pragma fragment frag
+            #pragma multi_compile _ VERTEXLIGHT_ON
             #pragma multi_compile_fwdbase 
             #define GEOMETRY
 
