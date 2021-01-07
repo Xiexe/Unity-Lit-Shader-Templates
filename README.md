@@ -23,3 +23,6 @@ __Supported Extra Features:__
 
 __In Progress Features:__
 - Mixed lighting support
+
+__Planned:__
+- Subsurface Scattering
