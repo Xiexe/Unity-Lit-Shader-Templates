@@ -14,15 +14,12 @@ __Supported Lighting Features:__
 - Directional Lightmap support
 - Realtime Lightmap support
 - Specular Lightmap Occlusion
+- Vertex Light support (Sampled in Pixel Shader to allow for normal mapping)
+- Linear SH Light Probe sampling
 
 __Supported Extra Features:__
 - Triplanar Mapping in World Space
 - Triplanar Mapping in Object Space
 
 __In Progress Features:__
-- Linear SH Light Probe sampling
 - Mixed lighting support
-
-__Planned Features:__
-- Vertex Light support
-
