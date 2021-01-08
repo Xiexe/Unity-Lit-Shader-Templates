@@ -44,8 +44,8 @@ void geom(triangle v2g v[3], inout TriangleStream<g2f> tristream)
         //Only pass needed things through for shadow caster
         #if !defined(UNITY_PASS_SHADOWCASTER)
         float3 worldNormal = UnityObjectToWorldNormal(v[i].normal);
-        float3 tangent = UnityObjectToWorldDir(v[i].tangent) * v[i].tangent.w;
-        float3 bitangent = cross(tangent, worldNormal);
+        float3 tangent = UnityObjectToWorldDir(v[i].tangent);
+        float3 bitangent = cross(tangent, worldNormal) * v[i].tangent.w;
 
         o.btn[0] = bitangent;
         o.btn[1] = tangent;
