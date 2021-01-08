@@ -36,6 +36,7 @@ float4 CustomStandardLightingBRDF(
     float3 diffuse = albedo;
     albedo.rgb *= (1-metallic);
 
+    bool lightEnv = any(_WorldSpaceLightPos0.xyz);
     float3 lightDir = getLightDir(i.worldPos);
     float4 lightCol = _LightColor0;
 
@@ -77,6 +78,7 @@ float4 CustomStandardLightingBRDF(
         #endif
 
         float3 indirectDiffuse = getIndirectDiffuse(worldNormal) + vertexLightData;
+        getLightCol(lightEnv, indirectDiffuse, lightCol); // This makes things look a little bit better in baked lighting
         float3 atten = (attenuation * ndl * lightCol) + indirectDiffuse;
         float3 directDiffuse = (albedo * atten);
     #endif

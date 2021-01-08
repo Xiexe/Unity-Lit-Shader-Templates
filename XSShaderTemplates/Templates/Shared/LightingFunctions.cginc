@@ -333,6 +333,24 @@ float3 getLightDir(float3 worldPos)
     return normalize(lightDir);
 }
 
+void getLightCol(bool lightEnv, inout half3 indirectDiffuse, inout half4 lightColor)
+{
+    //If we're in an environment with a realtime light, then we should use the light color, and indirect color raw.
+    //...
+    if(lightEnv)
+    {
+        lightColor = _LightColor0;
+        indirectDiffuse = indirectDiffuse;
+    }
+    else
+    {
+        lightColor = indirectDiffuse.xyzz * 0.6;    // ...Otherwise
+        indirectDiffuse = indirectDiffuse * 0.4;    // Keep overall light to 100% - these should never go over 100%
+                                                    // ex. If we have indirect 100% as the light color and Indirect 50% as the indirect color, 
+                                                    // we end up with 150% of the light from the scene.
+    }
+}
+
 float4 getClearcoatSmoothness(float4 clearcoatMap)
 {
     float roughness = 1-(_ClearcoatGlossiness * clearcoatMap.a);
