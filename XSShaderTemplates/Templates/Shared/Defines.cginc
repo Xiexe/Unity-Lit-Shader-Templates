@@ -1,12 +1,16 @@
 ﻿sampler2D _MainTex; float4 _MainTex_ST;
 sampler2D _MetallicGlossMap;
+sampler2D _OcclusionMap;
 sampler2D _BumpMap;
 sampler2D _ClearcoatMap;
 float4 _Color;
+float4 _OcclusionColor;
 float4 _SubsurfaceColor;
 float _Metallic;
 float _Glossiness;
 float _Reflectance;
+float _Anisotropy;
+float _ClearcoatAnisotropy;
 float _Clearcoat;
 float _ClearcoatGlossiness;
 float _BumpScale;

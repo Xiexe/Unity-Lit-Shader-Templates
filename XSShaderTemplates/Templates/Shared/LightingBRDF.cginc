@@ -15,8 +15,13 @@ float4 CustomStandardLightingBRDF(
 
     //NORMAL
     float3 unmodifiedWorldNormal = normalize(i.btn[2]);
+    float3 unmodifiedTangent = i.btn[1];
+    float3 unmodifiedBitangent = i.btn[0];
     float4 normalMap = texTP(_BumpMap, _MainTex_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
-    float3 worldNormal = getNormal(normalMap, i.btn[0], i.btn[1], i.btn[2]);
+    float3 worldNormal = i.btn[2];
+    float3 tangent = i.btn[1];
+    float3 bitangent = i.btn[0];
+    initBumpedNormalTangentBitangent(normalMap, bitangent, tangent, worldNormal);
 
     //METALLIC SMOOTHNESS
     float4 metallicGlossMap = texTP(_MetallicGlossMap, _MainTex_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
@@ -24,6 +29,10 @@ float4 CustomStandardLightingBRDF(
     float metallic = metallicSmoothness.r;
     float reflectance = _Reflectance;
     float roughness = metallicSmoothness.a;
+
+    //OCCLUSION
+    float4 occlusionMap = texTP(_OcclusionMap, _MainTex_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
+    float4 occlusion = lerp(_OcclusionColor, 1, occlusionMap);
 
     //CLEARCOAT MAP
     float4 clearcoatMap = texTP(_ClearcoatMap, _MainTex_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
@@ -43,7 +52,7 @@ float4 CustomStandardLightingBRDF(
     //LIGHTING VECTORS
     float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
     float3 halfVector = normalize(lightDir + viewDir);
-    float3 reflViewDir = reflect(-viewDir, worldNormal);
+    float3 reflViewDir = getAnisotropicReflectionVector(viewDir, bitangent, tangent, worldNormal, roughness, _Anisotropy);
     float3 reflLightDir = reflect(lightDir, worldNormal);
 
     //DOT PRODUCTS FOR LIGHTING
@@ -78,7 +87,6 @@ float4 CustomStandardLightingBRDF(
         #endif
 
         float3 indirectDiffuse = getIndirectDiffuse(worldNormal) + vertexLightData;
-        getLightCol(lightEnv, indirectDiffuse, lightCol); // This makes things look a little bit better in baked lighting
         float3 atten = (attenuation * ndl * lightCol) + indirectDiffuse;
         float3 directDiffuse = (albedo * atten);
     #endif
@@ -86,46 +94,53 @@ float4 CustomStandardLightingBRDF(
     //Specular BRDF
     // This is a pretty big hack of a specular brdf but I didn't like other implementations entirely. This is my own, mixed with some other stuff from other places.
     // This probably means it breaks energy conservation, fails the furnace test, etc, but, in my opinion, it looks better.
+    float3 specularLightCol = getLightCol(lightEnv, indirectDiffuse); // This makes things look a little bit better in baked lighting
     float3 f0 = 0.16 * reflectance * reflectance * (1.0 - metallic) + diffuse * metallic;
-    float3 schlickFresnel = F_Schlick(vdn, f0);
-    float3 fresnel = lerp(schlickFresnel, f0, metallic);
-    float3 directSpecular = getDirectSpecular(diffuse, metallic, roughness, ndh, vdn, ndl, ldh, f0) * attenuation * ndl * lightCol;
-    float3 indirectSpecular = getIndirectSpecular(metallic, roughness, reflViewDir, worldPos, directDiffuse); //Lightmap is stored in directDiffuse and used for specular lightmap occlusion
+    float3 fresnel = lerp(F_Schlick(vdn, f0), f0, metallic); //Kill fresnel on metallics, it looks bad.
+    float3 directSpecular = getDirectSpecular(roughness, ndh, vdn, ndl, ldh, f0, halfVector, tangent, bitangent, _Anisotropy) * attenuation * ndl * specularLightCol;
+    float3 indirectSpecular = getIndirectSpecular(metallic, roughness, reflViewDir, worldPos, directDiffuse, worldNormal); //Lightmap is stored in directDiffuse and used for specular lightmap occlusion
 
     float3 vertexLightSpec = 0;
+    float3 vertexLightClearcoatSpec = 0;
     #if defined(VERTEXLIGHT_ON)
+        [UNROLL(4)]
         for(int i = 0; i < 4; i++)
         {
             float3 vHalfVector = normalize(vLight.Direction[i] + viewDir);
             float vNDL = saturate(dot(vLight.Direction[i], worldNormal));
-            float vLDH = saturate(dot(vLight.Direction[i], halfVector));
+            float vLDH = saturate(dot(vLight.Direction[i], vHalfVector));
             float vNDH = saturate(dot(worldNormal, vHalfVector));
-            float vLspec = getDirectSpecular(diffuse, metallic, roughness, vNDH, vdn, vNDL, vLDH, f0) * vNDL;
+
+            float vCndl = saturate(dot(vLight.Direction[i], unmodifiedWorldNormal));
+            float vCvdn = abs(dot(viewDir, unmodifiedWorldNormal));
+            float vCndh = saturate(dot(unmodifiedWorldNormal, vHalfVector));
+
+            float3 vLspec = getDirectSpecular(roughness, vNDH, vdn, vNDL, vLDH, f0, vHalfVector, tangent, bitangent, _Anisotropy) * vNDL;
+            float3 vLspecCC = getDirectSpecular(clearcoatRoughness, vCndh, vCvdn, vCndl, vLDH, f0, vHalfVector, unmodifiedTangent, unmodifiedBitangent, _ClearcoatAnisotropy) * vNDL;
             vertexLightSpec += vLspec * vLight.ColorFalloff[i];
+            vertexLightClearcoatSpec += vLspecCC * vLight.ColorFalloff[i];
         }
     #endif
     
-    float3 specular = ((indirectSpecular + directSpecular + vertexLightSpec) * lerp(fresnel, f0, roughness)); //Personally i think the fresnel effect on dialectric materials looks bad, so lets kill it.
+    float3 specular = (indirectSpecular + directSpecular + vertexLightSpec) * lerp(fresnel, f0, roughness);
 
     //Clearcoat BRDF
     //LIGHTING VECTORS
-    float3 creflViewDir = reflect(-viewDir, unmodifiedWorldNormal);
+    float3 creflViewDir = getAnisotropicReflectionVector(viewDir, unmodifiedBitangent, unmodifiedTangent, unmodifiedWorldNormal, roughness, _ClearcoatAnisotropy);
 
-    //DOT PRODUCTS FOR LIGHTING
+    //dots for clearcoat
     float cndl = saturate(dot(lightDir, unmodifiedWorldNormal));
-    float cvdn = abs(dot(viewDir, unmodifiedWorldNormal));;
+    float cvdn = abs(dot(viewDir, unmodifiedWorldNormal));
     float cndh = saturate(dot(unmodifiedWorldNormal, halfVector));
 
     float3 clearcoatf0 = 0.16 * clearcoatReflectivity * clearcoatReflectivity;
     float3 clearcoatFresnel = F_Schlick(cvdn, clearcoatf0);
-    float3 clearcoatDirectSpecular = getDirectSpecular(diffuse, 0, clearcoatRoughness, cndh, cvdn, cndl, ldh, clearcoatf0) * attenuation * cndl * lightCol;
-    float3 clearcoatIndirectSpecular = getIndirectSpecular(0, clearcoatRoughness, creflViewDir, worldPos, directDiffuse);
-    float3 clearcoat = (clearcoatDirectSpecular + clearcoatIndirectSpecular) * clearcoatReflectivity * clearcoatFresnel;
-    // return clearcoat.xyzz;
+    float3 clearcoatDirectSpecular = getDirectSpecular(clearcoatRoughness, cndh, cvdn, cndl, ldh, clearcoatf0, halfVector, unmodifiedTangent, unmodifiedBitangent, _ClearcoatAnisotropy) * attenuation * cndl * lightCol;
+    float3 clearcoatIndirectSpecular = getIndirectSpecular(0, clearcoatRoughness, creflViewDir, worldPos, directDiffuse, unmodifiedWorldNormal);
+    float3 clearcoat = (clearcoatDirectSpecular + clearcoatIndirectSpecular + vertexLightClearcoatSpec) * clearcoatReflectivity * clearcoatFresnel;
 
     //TODO: Implement subsurface scattering
-
-    float3 lighting = (directDiffuse ) + specular + clearcoat;
+    float3 lighting = (directDiffuse + specular + clearcoat) * occlusion;
     float al = 1;
     #if defined(alphablend)
         al = albedo.a;

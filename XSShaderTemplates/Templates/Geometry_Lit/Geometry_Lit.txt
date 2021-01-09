@@ -16,7 +16,8 @@
             #pragma geometry geom
 			#pragma fragment frag
             #pragma multi_compile _ VERTEXLIGHT_ON
-            #pragma multi_compile_fwdbase 
+            #pragma multi_compile_fwdbase
+            #pragma target 4.0
             #define GEOMETRY
 
             #ifndef UNITY_PASS_FORWARDBASE
@@ -79,6 +80,7 @@
             #pragma geometry geom
 			#pragma fragment frag
             #pragma multi_compile_fwdadd_fullshadows
+            #pragma target 4.0
             #define GEOMETRY
 
             #ifndef UNITY_PASS_FORWARDADD
@@ -137,6 +139,7 @@
             #pragma fragment frag
             #pragma geometry geom
             #pragma multi_compile_shadowcaster
+            #pragma target 4.0
             #define GEOMETRY
             
             #ifndef UNITY_PASS_SHADOWCASTER

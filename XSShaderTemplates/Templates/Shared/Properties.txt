@@ -16,12 +16,20 @@ _MetallicGlossMap("Metallic Map", 2D) = "white" {}
 _Metallic("Metallic", Range(0,1)) = 0
 _Glossiness("Smoothness", Range(0,1)) = 0
 _Reflectance("Reflectance", Range(0,1)) = 0.5
+_Anisotropy("Anisotropy", Range(-1,1)) = 0
+
+[Space(16)]
+[Header(OCCLUSION)]
+_OcclusionMap("Occlusion Map", 2D) = "white" {}
+_OcclusionColor("Occlusion Color", Color) = (0,0,0,1)
 
 [Space(16)]
 [Header(CLEARCOAT)]
 _ClearcoatMap("Clearcoat Map", 2D) = "white" {}
 _Clearcoat("Clearcoat", Range(0,1)) = 0
 _ClearcoatGlossiness("Clearcoat Smoothness", Range(0,1)) = 0.5
+_ClearcoatGlossiness("Clearcoat Smoothness", Range(0,1)) = 0.5
+_ClearcoatAnisotropy("Clearcoat Anisotropy", Range(-1,1)) = 0
 
 //[Space(16)]
 //[Header(SUBSURFACE)]

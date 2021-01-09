@@ -24,6 +24,17 @@ float D_GGX(float NoH, float roughness)
     return a2 / (UNITY_PI * f * f);
 }
 
+float D_GGX_Anisotropic(float NoH, const float3 h, const float3 t, const float3 b, float at, float ab) 
+{
+    float ToH = dot(t, h);
+    float BoH = dot(b, h);
+    float a2 = at * ab;
+    float3 v = float3(ab * ToH, at * BoH, a2 * NoH);
+    float v2 = dot(v, v);
+    float w2 = a2 / v2;
+    return a2 * w2 * w2 * (1.0 / UNITY_PI);
+}
+
 float V_Kelemen(float LoH) {
     return 0.25 / (LoH * LoH);
 }
@@ -224,7 +235,7 @@ float3 getBoxProjection (float3 direction, float3 position, float4 cubemapPositi
 }
 
 //Last parameter is used for lightmap occlusion only
-float3 getIndirectSpecular(float metallic, float roughness, float3 reflDir, float3 worldPos, float3 lightmap)
+float3 getIndirectSpecular(float metallic, float roughness, float3 reflDir, float3 worldPos, float3 lightmap, float3 normal)
 {	//This function handls Unity style reflections, Matcaps, and a baked in fallback cubemap.
     float3 spec = float3(0,0,0);
     #if defined(UNITY_PASS_FORWARDBASE)
@@ -254,8 +265,10 @@ float3 getIndirectSpecular(float metallic, float roughness, float3 reflDir, floa
         {
             indirectSpecular = probe0;
         }
+        float horizon = min(1 + dot(reflDir, normal), 1);
+        indirectSpecular *= horizon * horizon;
+
         spec = indirectSpecular;
-        
         #if defined(LIGHTMAP_ON)
             float specMultiplier = max(0, lerp(1, pow(length(lightmap), _SpecLMOcclusionAdjust), _SpecularLMOcclusion));
             spec *= specMultiplier;
@@ -264,28 +277,44 @@ float3 getIndirectSpecular(float metallic, float roughness, float3 reflDir, floa
     return spec;
 }
 
-float getDirectSpecular(float3 diffuseColor, float metallic, float roughness, float ndh, float vdn, float ndl, float ldh, float3 f0)
+float3 getDirectSpecular(float roughness, float ndh, float vdn, float ndl, float ldh, float3 f0, float3 halfVector, float3 tangent, float3 bitangent, float anisotropy)
 {
     float rough = max(roughness * roughness, 0.045);
-    float D = D_GGX(ndh, rough);
+
+    float at = max(roughness * (1.0 + anisotropy), 0.001);
+    float ab = max(roughness * (1.0 - anisotropy), 0.001);
+    float D = D_GGX_Anisotropic(ndh, halfVector, tangent, bitangent, at, ab);
     float3 F = F_Schlick(ldh, f0);
-    float V = V_SmithGGXCorrelated(vdn, ndl, rough);
-    float directSpecular = max(0, (D * V) * F);
-    //directSpecular = pow(ndh, (1-roughness) * 64);
-    return directSpecular;
+    return D * F;
 }
 
-float3 getNormal(float4 normalMap, float3 bitangent, float3 tangent, float3 worldNormal)
+void initBumpedNormalTangentBitangent(float4 normalMap, inout float3 bitangent, inout float3 tangent, inout float3 normal)
 {
-    float3 tspace0 = float3(tangent.x, bitangent.x, worldNormal.x);
-    float3 tspace1 = float3(tangent.y, bitangent.y, worldNormal.y);
-    float3 tspace2 = float3(tangent.z, bitangent.z, worldNormal.z);
+    float3 tspace0 = float3(tangent.x, bitangent.x, normal.x);
+    float3 tspace1 = float3(tangent.y, bitangent.y, normal.y);
+    float3 tspace2 = float3(tangent.z, bitangent.z, normal.z);
 
     float3 tangentNormal = UnpackScaleNormal(normalMap, _BumpScale);
-    tangentNormal.y *= -1; //flip up vector because I have to for some reason?
-    return normalize(tangentNormal.x * tangent +
-        tangentNormal.y * bitangent +
-        tangentNormal.z * worldNormal);
+
+    float3 calcedNormal;
+    calcedNormal.x = dot(tspace0, tangentNormal);
+    calcedNormal.y = dot(tspace1, tangentNormal);
+    calcedNormal.z = dot(tspace2, tangentNormal);
+
+    normal = normalize(calcedNormal);
+    tangent = normalize(cross(normal, bitangent));
+    bitangent = normalize(cross(normal, tangent));
+}
+
+float3 getAnisotropicReflectionVector(float3 viewDir, float3 bitangent, float3 tangent, float3 normal, float roughness, float anisotropy)
+{
+    //_Anisotropy = lerp(-0.2, 0.2, sin(_Time.y / 20)); //This is pretty fun
+    float3 anisotropicDirection = anisotropy >= 0.0 ? bitangent : tangent;
+    float3 anisotropicTangent = cross(anisotropicDirection, viewDir);
+    float3 anisotropicNormal = cross(anisotropicTangent, anisotropicDirection);
+    float bendFactor = abs(anisotropy) * saturate(5.0 * roughness);
+    float3 bentNormal = normalize(lerp(normal, anisotropicNormal, bendFactor));
+    return reflect(-viewDir, bentNormal);
 }
 
 float3 getRealtimeLightmap(float2 uv, float3 worldNormal)
@@ -333,22 +362,9 @@ float3 getLightDir(float3 worldPos)
     return normalize(lightDir);
 }
 
-void getLightCol(bool lightEnv, inout half3 indirectDiffuse, inout half4 lightColor)
+float3 getLightCol(bool lightEnv, float3 indirectDiffuse)
 {
-    //If we're in an environment with a realtime light, then we should use the light color, and indirect color raw.
-    //...
-    if(lightEnv)
-    {
-        lightColor = _LightColor0;
-        indirectDiffuse = indirectDiffuse;
-    }
-    else
-    {
-        lightColor = indirectDiffuse.xyzz * 0.6;    // ...Otherwise
-        indirectDiffuse = indirectDiffuse * 0.4;    // Keep overall light to 100% - these should never go over 100%
-                                                    // ex. If we have indirect 100% as the light color and Indirect 50% as the indirect color, 
-                                                    // we end up with 150% of the light from the scene.
-    }
+    return lerp(indirectDiffuse, _LightColor0, lightEnv);
 }
 
 float4 getClearcoatSmoothness(float4 clearcoatMap)
