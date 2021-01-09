@@ -279,10 +279,10 @@ float3 getIndirectSpecular(float metallic, float roughness, float3 reflDir, floa
 
 float3 getDirectSpecular(float roughness, float ndh, float vdn, float ndl, float ldh, float3 f0, float3 halfVector, float3 tangent, float3 bitangent, float anisotropy)
 {
+    anisotropy *= saturate(5.0 * roughness);
     float rough = max(roughness * roughness, 0.045);
-
-    float at = max(roughness * (1.0 + anisotropy), 0.001);
-    float ab = max(roughness * (1.0 - anisotropy), 0.001);
+    float at = max(rough * (1.0 + anisotropy), 0.001);
+    float ab = max(rough * (1.0 - anisotropy), 0.001);
     float D = D_GGX_Anisotropic(ndh, halfVector, tangent, bitangent, at, ab);
     float3 F = F_Schlick(ldh, f0);
     return D * F;
