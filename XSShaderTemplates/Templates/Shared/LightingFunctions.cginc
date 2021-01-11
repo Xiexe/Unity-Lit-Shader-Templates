@@ -284,9 +284,11 @@ float3 getDirectSpecular(float roughness, float ndh, float vdn, float ndl, float
     float at = max(rough * (1.0 + anisotropy), 0.001);
     float ab = max(rough * (1.0 - anisotropy), 0.001);
     float D = D_GGX_Anisotropic(ndh, halfVector, tangent, bitangent, at, ab);
+    float V = V_SmithGGXCorrelated(vdn, ndl, rough);
     float3 F = F_Schlick(ldh, f0);
-    return D * F;
+    return D * V;
 }
+
 
 void initBumpedNormalTangentBitangent(float4 normalMap, inout float3 bitangent, inout float3 tangent, inout float3 normal)
 {
@@ -409,4 +411,55 @@ float4 texTP( sampler2D tex, float4 tillingOffset, float3 worldPos, float3 objPo
     else{
         return tex2D(tex, uv);
     } 
+}
+
+inline float Dither8x8Bayer(int x, int y)
+{
+    const float dither[ 64 ] = {
+    1, 49, 13, 61,  4, 52, 16, 64,
+    33, 17, 45, 29, 36, 20, 48, 32,
+    9, 57,  5, 53, 12, 60,  8, 56,
+    41, 25, 37, 21, 44, 28, 40, 24,
+    3, 51, 15, 63,  2, 50, 14, 62,
+    35, 19, 47, 31, 34, 18, 46, 30,
+    11, 59,  7, 55, 10, 58,  6, 54,
+    43, 27, 39, 23, 42, 26, 38, 22};
+    int r = y * 8 + x;
+    return dither[r] / 64;
+}
+
+float getDither(float2 screenPos)
+{
+    float dither = Dither8x8Bayer(fmod(screenPos.x, 8), fmod(screenPos.y, 8));
+    return dither;
+}
+
+float2 getScreenUVs(float4 screenPos)
+{
+    float2 uv = screenPos / (screenPos.w + 0.0000000001); //0.0x1 Stops division by 0 warning in console.
+    #if UNITY_SINGLE_PASS_STEREO
+        uv.xy *= float2(_ScreenParams.x * 2, _ScreenParams.y);	
+    #else
+        uv.xy *= _ScreenParams.xy;
+    #endif
+    
+    return uv;
+}
+
+void doAlpha(inout float alpha, float4 diffuse, float4 screenPos)
+{
+    alpha = 1;
+    #if defined(ALPHATEST)
+        clip(diffuse.a - _Cutoff);
+    #endif
+
+    #if defined(DITHERED)
+        float2 screenUV = getScreenUVs(screenPos);
+        float dither = getDither(screenUV);
+        clip(diffuse.a - dither);
+    #endif
+
+    #if defined(TRANSPARENT) || defined(ALPHATOCOVERAGE)
+        alpha = diffuse.a; //should be maintex * color
+    #endif
 }

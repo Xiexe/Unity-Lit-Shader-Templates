@@ -7,8 +7,9 @@ Shader "Template/Tessellated"
 
     SubShader 
     {
-        Tags { "RenderType"="Opaque" "Queue"="Geometry" }
-    
+        $TAGS
+        $BLENDMODE
+
         Pass 
         {  
             Tags{"LightMode"="ForwardBase"} 
@@ -24,6 +25,7 @@ Shader "Template/Tessellated"
             #pragma multi_compile _ VERTEXLIGHT_ON
             #pragma multi_compile_fwdbase 
             #define TESSELLATION
+            $BLENDDEFINE
 
             #ifndef UNITY_PASS_FORWARDBASE
                 #define UNITY_PASS_FORWARDBASE
@@ -49,7 +51,8 @@ Shader "Template/Tessellated"
                 float4 worldPos : TEXCOORD6;
                 float3 objPos : TEXCOORD7;
                 float3 objNormal : TEXCOORD8;
-                SHADOW_COORDS(9)
+                float4 screenPos : TEXCOORD9;
+                SHADOW_COORDS(10)
             };
             
             #include "Defines.cginc"
@@ -74,6 +77,7 @@ Shader "Template/Tessellated"
             #pragma fragment frag
             #pragma multi_compile_fwdadd_fullshadows
             #define TESSELLATION
+            $BLENDDEFINE
 
             #ifndef UNITY_PASS_FORWARDADD
                 #define UNITY_PASS_FORWARDADD
@@ -95,7 +99,8 @@ Shader "Template/Tessellated"
                 float4 worldPos : TEXCOORD4;
                 float3 objPos : TEXCOORD5;
                 float3 objNormal : TEXCOORD6;
-                SHADOW_COORDS(7)
+                float4 screenPos : TEXCOORD7;
+                SHADOW_COORDS(8)
             };
       
             #include "Defines.cginc"
@@ -117,6 +122,7 @@ Shader "Template/Tessellated"
             #pragma domain domain
             #pragma fragment frag
             #pragma multi_compile_shadowcaster
+            $BLENDDEFINE
             
             #ifndef UNITY_PASS_SHADOWCASTER
                 #define UNITY_PASS_SHADOWCASTER
@@ -134,6 +140,11 @@ Shader "Template/Tessellated"
             struct vertexOutput {
                 float4 pos : SV_POSITION;
                 float2 uv : TEXCOORD0;
+                float3 btn[3] : TEXCOORD1; //2 3;
+                float4 worldPos : TEXCOORD4;
+                float3 objPos : TEXCOORD5;
+                float3 objNormal : TEXCOORD6;
+                float4 screenPos : TEXCOORD7;
             };
             
             #include "Defines.cginc"

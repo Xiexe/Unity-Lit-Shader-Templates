@@ -25,18 +25,19 @@ void geom(triangle vertexOutput v[3], inout TriangleStream<g2f> tristream)
             o.uv2 = v[i].uv2;
         #endif
         
-        //Only pass needed things through for shadow caster
-        #if !defined(UNITY_PASS_SHADOWCASTER)
         float3 worldNormal = UnityObjectToWorldNormal(v[i].normal);
         float3 tangent = UnityObjectToWorldDir(v[i].tangent);
         float3 bitangent = cross(tangent, worldNormal) * v[i].tangent.w;
-
         o.btn[0] = bitangent;
         o.btn[1] = tangent;
         o.btn[2] = worldNormal;
         o.worldPos = mul(unity_ObjectToWorld, v[i].vertex);
         o.objPos = v[i].vertex;
         o.objNormal = v[i].normal;
+        o.screenPos = ComputeScreenPos(o.pos);
+
+        //Only pass needed things through for shadow caster
+        #if !defined(UNITY_PASS_SHADOWCASTER)
         UNITY_TRANSFER_SHADOW(o, o.uv);
         #else
         TRANSFER_SHADOW_CASTER_NOPOS_GEOMETRY(o, o.pos, v[i].vertex, v[i].normal);
@@ -51,6 +52,9 @@ fixed4 frag (g2f i) : SV_Target
 {
         //Return only this if in the shadowcaster
     #if defined(UNITY_PASS_SHADOWCASTER)
+        float4 albedo = texTP(_MainTex, _MainTex_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv) * _Color;
+        float alpha;
+        doAlpha(alpha, albedo.a, i.screenPos);
         SHADOW_CASTER_FRAGMENT(i);
     #else
         return CustomStandardLightingBRDF(i);

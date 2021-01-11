@@ -14,13 +14,15 @@ v2f vert (appdata v)
     o.uv2 = v.uv2;
     #endif
     
-    #if !defined(UNITY_PASS_SHADOWCASTER)
     o.btn[0] = bitangent;
     o.btn[1] = tangent;
     o.btn[2] = worldNormal;
     o.worldPos = mul(unity_ObjectToWorld, v.vertex);
     o.objPos = v.vertex;
     o.objNormal = v.normal;
+    o.screenPos = ComputeScreenPos(o.pos);
+
+    #if !defined(UNITY_PASS_SHADOWCASTER)
     UNITY_TRANSFER_SHADOW(o, o.uv);
     #else
     TRANSFER_SHADOW_CASTER_NOPOS(o, o.pos);
@@ -33,6 +35,9 @@ fixed4 frag (v2f i) : SV_Target
 {
     //Return only this if in the shadowcaster
     #if defined(UNITY_PASS_SHADOWCASTER)
+        float4 albedo = texTP(_MainTex, _MainTex_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv) * _Color;
+        float alpha;
+        doAlpha(alpha, albedo.a, i.screenPos);
         SHADOW_CASTER_FRAGMENT(i);
     #else
         return CustomStandardLightingBRDF(i);

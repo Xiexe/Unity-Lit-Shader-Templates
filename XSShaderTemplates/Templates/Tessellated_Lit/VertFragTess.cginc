@@ -16,6 +16,9 @@ fixed4 frag (vertexOutput i) : SV_Target
 {
         //Return only this if in the shadowcaster
     #if defined(UNITY_PASS_SHADOWCASTER)
+        float4 albedo = texTP(_MainTex, _MainTex_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv) * _Color;
+        float alpha;
+        doAlpha(alpha, albedo.a, i.screenPos);
         SHADOW_CASTER_FRAGMENT(i);
     #else
         return CustomStandardLightingBRDF(i);
