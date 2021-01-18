@@ -38,7 +38,6 @@ float4 CustomStandardLightingBRDF(
         float reflectance = _Reflectance;
         float roughness = metallicSmoothness.a;
         albedo.rgb *= (1-metallic);
-        //return albedo;
     //----
 
     //OCCLUSION
@@ -120,7 +119,7 @@ float4 CustomStandardLightingBRDF(
 
         float3 vertexLightSpec = 0;
         float3 vertexLightClearcoatSpec = 0;
-        #if defined(VERTEXLIGHT_ON)
+        #if defined(VERTEXLIGHT_ON) && !defined(LIGHTMAP_ON)
             [UNROLL(4)]
             for(int i = 0; i < 4; i++)
             {
@@ -139,7 +138,7 @@ float4 CustomStandardLightingBRDF(
                 vertexLightClearcoatSpec += vLspecCC * vLight.ColorFalloff[i];
             }
         #endif
-        float3 specular = max(0, (indirectSpecular + directSpecular + vertexLightSpec) * lerp(fresnel, f0, roughness));
+        float3 specular = (indirectSpecular + directSpecular + vertexLightSpec) * lerp(fresnel, f0, roughness);
     //----
 
     //Clearcoat BRDF
