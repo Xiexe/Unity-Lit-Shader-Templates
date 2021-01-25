@@ -12,6 +12,13 @@ float4 CustomStandardLightingBRDF(
     //LIGHTING PARAMS
     UNITY_LIGHT_ATTENUATION(attenuation, i, i.worldPos.xyz);
     float3 worldPos = i.worldPos;
+    // fix for rare bug where light atten is 0 when there is no directional light in the scene
+	#ifdef UNITY_PASS_FORWARDBASE
+		if(all(_LightColor0.rgb == 0.0))
+		{
+			attenuation = 1.0;
+		}
+	#endif
 
     //NORMAL
         float3 unmodifiedWorldNormal = normalize(i.btn[2]);
@@ -91,7 +98,7 @@ float4 CustomStandardLightingBRDF(
         #else
             //Gather up non-important lights
             float3 vertexLightData = 0;
-            #if defined(VERTEXLIGHT_ON)
+            #if defined(VERTEXLIGHT_ON) && !defined(LIGHTMAP_ON)
                 VertexLightInformation vLight = (VertexLightInformation)0;
                 float4 vertexLightAtten = float4(0,0,0,0);
                 float3 vertexLightColor = get4VertexLightsColFalloff(vLight, worldPos, worldNormal, vertexLightAtten);
