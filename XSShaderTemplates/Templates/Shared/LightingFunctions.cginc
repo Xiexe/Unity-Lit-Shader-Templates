@@ -291,7 +291,8 @@ void initBumpedNormalTangentBitangent(float4 normalMap, inout float3 bitangent, 
     float3 tspace2 = float3(tangent.z, bitangent.z, normal.z);
 
     float3 tangentNormal = UnpackScaleNormal(normalMap, _BumpScale);
-
+    tangentNormal.y *= -1;
+    
     float3 calcedNormal;
     calcedNormal.x = dot(tspace0, tangentNormal);
     calcedNormal.y = dot(tspace1, tangentNormal);
