@@ -46,6 +46,9 @@ float4 CustomStandardLightingBRDF(
         float roughness = metallicSmoothness.a;
         albedo.rgb *= (1-metallic);
     //----
+    
+    //CURVATURE THICKNESS MAP
+        float4 curvature = texTP(_CurvatureThicknessMap, _MainTex_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
 
     //OCCLUSION
         float4 occlusionMap = texTP(_OcclusionMap, _MainTex_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
@@ -69,8 +72,9 @@ float4 CustomStandardLightingBRDF(
 
     //LIGHTING VECTORS
         bool lightEnv = any(_WorldSpaceLightPos0.xyz);
+        float3 indirectDominantColor = half3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
         float3 lightDir = getLightDir(i.worldPos);
-        float4 lightCol = _LightColor0;
+        float3 lightCol = getLightCol(lightEnv, _LightColor0.rgb, indirectDominantColor);
         float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
         float3 halfVector = normalize(lightDir + viewDir);
         float3 reflViewDir = getAnisotropicReflectionVector(viewDir, bitangent, tangent, worldNormal, roughness, _Anisotropy);
@@ -78,7 +82,9 @@ float4 CustomStandardLightingBRDF(
     //----
 
     //DOT PRODUCTS FOR LIGHTING
-        float ndl = saturate(dot(lightDir, worldNormal));
+        float ndl = dot(lightDir, worldNormal);
+        float ndl01 = ndl * 0.5 + 0.5;
+        ndl = saturate(ndl);
         float vdn = abs(dot(viewDir, worldNormal));
         float vdh = saturate(dot(viewDir, halfVector));
         float rdv = saturate(dot(reflLightDir, float4(-viewDir, 0)));
@@ -86,7 +92,25 @@ float4 CustomStandardLightingBRDF(
         float ndh = saturate(dot(worldNormal, halfVector));
     //----
 
+
     //LIGHTING
+    float3 diffuseNDL = ndl; //Modified for diffuse if using Subsurface Preintegrated mode, otherwise use normal Lambertian NDL.
+    if(_SubsurfaceMethod == 1)
+    {
+        //Calculates a Subsurface Scattering LUT with some cursed ass shit.
+        float lutsamplex = ndl01;
+        #if defined(UNITY_PASS_FORWARDBASE)
+            lutsamplex *= attenuation; // Looks good in forwadbase pass, but not with add lights.
+        #endif
+        float mod = smoothstep(0, 1, curvature.r);
+        float mod2 = smoothstep(0, 1, lutsamplex);
+        float mod3 = smoothstep(0.4, 1, lutsamplex);
+        float mod4 = smoothstep(0.45, 0.6, lutsamplex);
+        float3 scatter = ((mod * mod2) + mod3 + (mod * 0.05) + mod4) / 3;
+        scatter *= lerp(1, _SubsurfaceScatteringColor * lerp(1, diffuse, _SubsurfaceInheritDiffuse), 1-ndl);
+        diffuseNDL = scatter;
+    }
+    
     //Diffuse BRDF
         #if defined(LIGHTMAP_ON)
             float3 indirectDiffuse = 0;
@@ -110,18 +134,19 @@ float4 CustomStandardLightingBRDF(
             #endif
 
             float3 indirectDiffuse = getIndirectDiffuse(worldNormal) + vertexLightData;
-            float3 atten = (attenuation * ndl * lightCol) + indirectDiffuse;
+            float3 atten = (attenuation * diffuseNDL * lightCol) + indirectDiffuse;
             float3 directDiffuse = (albedo * atten);
+
         #endif
     //----
 
     //Specular BRDF
     // This is a pretty big hack of a specular brdf but I didn't like other implementations entirely. This is my own, mixed with some other stuff from other places.
     // This probably means it breaks energy conservation, fails the furnace test, etc, but, in my opinion, it looks better.
-        float3 specularLightCol = getLightCol(lightEnv, indirectDiffuse); // This makes things look a little bit better in baked lighting by forcing a "direct" specular highlight to always be visible by getting the dominant light probe direction and color.
+    // This makes things look a little bit better in baked lighting by forcing a "direct" specular highlight to always be visible by getting the dominant light probe direction and color.
         float3 f0 = 0.16 * reflectance * reflectance * (1.0 - metallic) + diffuse * metallic;
         float3 fresnel = lerp(F_Schlick(vdn, f0), f0, metallic); //Kill fresnel on metallics, it looks bad.
-        float3 directSpecular = getDirectSpecular(roughness, ndh, vdn, ndl, ldh, f0, halfVector, tangent, bitangent, _Anisotropy) * attenuation * ndl * specularLightCol;
+        float3 directSpecular = getDirectSpecular(roughness, ndh, vdn, ndl, ldh, f0, halfVector, tangent, bitangent, _Anisotropy) * attenuation * ndl * lightCol;
         float3 indirectSpecular = getIndirectSpecular(metallic, roughness, reflViewDir, worldPos, directDiffuse, worldNormal); //Lightmap is stored in directDiffuse and used for specular lightmap occlusion
 
         float3 vertexLightSpec = 0;

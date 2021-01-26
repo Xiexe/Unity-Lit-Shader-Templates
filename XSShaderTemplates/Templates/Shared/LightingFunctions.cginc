@@ -364,9 +364,10 @@ float3 getLightDir(float3 worldPos)
     return normalize(lightDir);
 }
 
-float3 getLightCol(bool lightEnv, float3 indirectDiffuse)
+float3 getLightCol(bool lightEnv, float3 lightColor, float3 indirectDominantColor)
 {
-    return lerp(indirectDiffuse, _LightColor0, lightEnv);
+    float3 c = lightEnv ? lightColor : indirectDominantColor;
+    return c;
 }
 
 float4 getClearcoatSmoothness(float4 clearcoatMap)
@@ -388,6 +389,41 @@ float3 getClearcoat(float3 baseColor, float reflectivity, float roughness, float
 
     // account for energy loss in the base layer
     return baseColor * ((Fd + Fr * (1.0 - Fc)) * (1.0 - Fc) + Frc);
+}
+
+float2 getScreenUVs(float4 screenPos)
+{
+    float2 uv = screenPos / (screenPos.w + 0.0000000001); //0.0x1 Stops division by 0 warning in console.
+    #if UNITY_SINGLE_PASS_STEREO
+        uv.xy *= float2(_ScreenParams.x * 2, _ScreenParams.y);	
+    #else
+        uv.xy *= _ScreenParams.xy;
+    #endif
+    
+    return uv;
+}
+
+float getScreenSpaceDithering(float2 screenUV)
+{
+    //Iestyn's RGB dither(7 asm instructions) from Portal2 X360, slightly modified for VR
+    float vDither = dot(float2(171.0,231.0), screenUV.xy + _Time.y).x;
+    vDither = frac(vDither / float3(103.0, 71.0, 97.0)) - float3(0.5, 0.5, 0.5);
+    return (vDither / 255.0) * 0.375;
+}
+
+float getCurvature(float3 normal, float3 pos)
+{
+    float c = saturate((clamp(length(fwidth(normal.xyz)), 0.0, 1.0) / (length(fwidth(pos.xyz)) * 100) ));
+    return c;
+}
+
+float getGeometricSpecularAA(float3 normal)
+{
+    float3 vNormalWsDdx = ddx(normal.xyz);
+    float3 vNormalWsDdy = ddy(normal.xyz);
+    float flGeometricRoughnessFactor = pow(saturate(max(dot(vNormalWsDdx.xyz,vNormalWsDdx.xyz), dot(vNormalWsDdy.xyz,vNormalWsDdy.xyz))), 0.333);
+    //vRoughness.xy = max(vRoughness.xy, flGeometricRoughnessFactor.xx); //Ensure we don’t double-count roughness if normal map encodes geometric roughness 
+    return flGeometricRoughnessFactor;
 }
 
 //Triplanar map a texture (Object or World space), or sample it normally.
@@ -432,18 +468,6 @@ float getDither(float2 screenPos)
 {
     float dither = Dither8x8Bayer(fmod(screenPos.x, 8), fmod(screenPos.y, 8));
     return dither;
-}
-
-float2 getScreenUVs(float4 screenPos)
-{
-    float2 uv = screenPos / (screenPos.w + 0.0000000001); //0.0x1 Stops division by 0 warning in console.
-    #if UNITY_SINGLE_PASS_STEREO
-        uv.xy *= float2(_ScreenParams.x * 2, _ScreenParams.y);	
-    #else
-        uv.xy *= _ScreenParams.xy;
-    #endif
-    
-    return uv;
 }
 
 void doAlpha(inout float alpha, float4 diffuse, float4 screenPos)

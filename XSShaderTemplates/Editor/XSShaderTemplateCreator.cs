@@ -30,7 +30,6 @@ public class XSShaderTemplateCreator
     private static void getPathAndCreate(int index, BlendModes blendMode)
     {
         getTemplatePath();
-
         if (IsAssetAFolder(Selection.activeObject))
         {
             Create(index, blendMode);
@@ -38,8 +37,8 @@ public class XSShaderTemplateCreator
         }
         else
         {
-            Debug.Log("Not a valid path, creating at parent folder.");
-            createPath = createPath.Substring(0, createPath.LastIndexOf("/") + 1);
+            Debug.Log("Not a valid path, creating in Assets.");
+            createPath = "Assets";
 
             Create(index, blendMode);
             Debug.Log("Created at " + createPath);

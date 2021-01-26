@@ -25,6 +25,13 @@ _OcclusionMap("Occlusion Map", 2D) = "white" {}
 _OcclusionColor("Occlusion Color", Color) = (0,0,0,1)
 
 [Space(16)]
+[Header(SUBSURFACE SCATTERING)]
+[Enum(Off, 0, Estimate, 1)]_SubsurfaceMethod("Subsurface Scattering Method", Int) = 0
+_SubsurfaceScatteringColor("Subsurface Color", Color) = (0,0,0,1)
+_SubsurfaceInheritDiffuse("Subsurface Inherit Diffuse", Range(0,1)) = 0
+_CurvatureThicknessMap("Curvature Thickness Map", 2D) = "gray" {}
+
+[Space(16)]
 [Header(EMISSION)]
 _EmissionMap("Emission Map", 2D) = "white" {}
 [HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
@@ -33,7 +40,6 @@ _EmissionMap("Emission Map", 2D) = "white" {}
 [Header(CLEARCOAT)]
 _ClearcoatMap("Clearcoat Map", 2D) = "white" {}
 _Clearcoat("Clearcoat", Range(0,1)) = 0
-_ClearcoatGlossiness("Clearcoat Smoothness", Range(0,1)) = 0.5
 _ClearcoatGlossiness("Clearcoat Smoothness", Range(0,1)) = 0.5
 _ClearcoatAnisotropy("Clearcoat Anisotropy", Range(-1,1)) = 0
 
