@@ -73,7 +73,7 @@ float4 CustomStandardLightingBRDF(
     //LIGHTING VECTORS
         bool lightEnv = any(_WorldSpaceLightPos0.xyz);
         float3 indirectDominantColor = half3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
-        float3 lightDir = getLightDir(i.worldPos);
+        float3 lightDir = getLightDir(lightEnv, i.worldPos);
         float3 lightCol = getLightCol(lightEnv, _LightColor0.rgb, indirectDominantColor);
         float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
         float3 halfVector = normalize(lightDir + viewDir);
@@ -95,21 +95,6 @@ float4 CustomStandardLightingBRDF(
 
     //LIGHTING
     float3 diffuseNDL = ndl; //Modified for diffuse if using Subsurface Preintegrated mode, otherwise use normal Lambertian NDL.
-    if(_SubsurfaceMethod == 1)
-    {
-        //Calculates a Subsurface Scattering LUT with some cursed ass shit.
-        float lutsamplex = ndl01;
-        #if defined(UNITY_PASS_FORWARDBASE)
-            lutsamplex *= attenuation; // Looks good in forwadbase pass, but not with add lights.
-        #endif
-        float mod = smoothstep(0, 1, curvature.r);
-        float mod2 = smoothstep(0, 1, lutsamplex);
-        float mod3 = smoothstep(0.4, 1, lutsamplex);
-        float mod4 = smoothstep(0.45, 0.6, lutsamplex);
-        float3 scatter = ((mod * mod2) + mod3 + (mod * 0.05) + mod4) / 3;
-        scatter *= lerp(1, _SubsurfaceScatteringColor * lerp(1, diffuse, _SubsurfaceInheritDiffuse), 1-ndl);
-        diffuseNDL = scatter;
-    }
     
     //Diffuse BRDF
         #if defined(LIGHTMAP_ON)
@@ -134,6 +119,24 @@ float4 CustomStandardLightingBRDF(
             #endif
 
             float3 indirectDiffuse = getIndirectDiffuse(worldNormal) + vertexLightData;
+
+            if(_SubsurfaceMethod == 1)
+            {
+                //Calculates a Subsurface Scattering LUT with some cursed ass shit.
+                //This might all seem a bit confusing if you don't know whats going on - but check this output
+                //I'm emulating how a preintegrated texture looks. If you put this code into its own shader, and replace 
+                //curvature.r (remove .g) with uv.y, and ndl01 with uv.x, slap that on a quad, and you'll see the LUT that I'm creating here.
+                float3 subsurfaceColor = _SubsurfaceScatteringColor * lerp(1, diffuse, _SubsurfaceInheritDiffuse);
+                float3 transmission = getTransmission(subsurfaceColor, attenuation, diffuse, 1-curvature.g, lightDir, viewDir, worldNormal, lightCol, indirectDiffuse);
+                float curve = curvature.r * (1-curvature.g);
+                float x = smoothstep(0, 1, ndl01);
+                float x1 = smoothstep(0.4, 1, ndl01);
+                float x2 = smoothstep(0.45, 0.6, ndl01);
+                float3 scatter = ((curve * x) + x1 + (x * 0.05) + x2) / 3;
+                scatter *= lerp(1, subsurfaceColor, smoothstep(0.5,1,1-ndl));
+                diffuseNDL = scatter + transmission;
+            }
+    
             float3 atten = (attenuation * diffuseNDL * lightCol) + indirectDiffuse;
             float3 directDiffuse = (albedo * atten);
 

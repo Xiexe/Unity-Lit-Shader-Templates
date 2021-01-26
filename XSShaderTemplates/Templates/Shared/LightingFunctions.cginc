@@ -1,10 +1,4 @@
 ﻿//This file contains all of the neccisary functions for lighting to work a'la standard shading.
-struct VertexLightInformation {
-    float3 Direction[4];
-    float3 ColorFalloff[4];
-    float Attenuation[4];
-};
-
 //Feel free to add to this.
 #define grayscaleVec float3(0.2125, 0.7154, 0.0721)
 float pow5(float a)
@@ -52,7 +46,7 @@ float3 F_Schlick(const float3 f0, float f90, float VoH)
 
 float3 F_FresnelLerp (float3 F0, float3 F90, float cosA)
 {
-    float t = Pow5 (1 - cosA);   // ala Schlick interpoliation
+    float t = pow5(1 - cosA);   // ala Schlick interpoliation
     return lerp (F0, F90, t);
 }
 
@@ -347,13 +341,11 @@ float3 getLightmap(float2 uv, float3 worldNormal, float3 worldPos)
 }
 
 // Get the most intense light Dir from probes OR from a light source. Method developed by Xiexe / Merlin
-float3 getLightDir(float3 worldPos)
-{   
-    float3 lightDir = UnityWorldSpaceLightDir(worldPos);
-
-    float3 probeLightDir = unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz;
-    lightDir = (lightDir + probeLightDir); //Make light dir the average of the probe direction and the light source direction.
-
+float3 getLightDir(bool lightEnv, float3 worldPos)
+{
+    //switch between using probes or actual light direction
+    float3 lightDir = lightEnv ? UnityWorldSpaceLightDir(worldPos) : unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz;
+    
     #if !defined(POINT) && !defined(SPOT) && !defined(VERTEXLIGHT_ON) // if the average length of the light probes is null, and we don't have a directional light in the scene, fall back to our fallback lightDir
         if(length(unity_SHAr.xyz*unity_SHAr.w + unity_SHAg.xyz*unity_SHAg.w + unity_SHAb.xyz*unity_SHAb.w) == 0 && length(lightDir) < 0.1)
         {
@@ -424,6 +416,17 @@ float getGeometricSpecularAA(float3 normal)
     float flGeometricRoughnessFactor = pow(saturate(max(dot(vNormalWsDdx.xyz,vNormalWsDdx.xyz), dot(vNormalWsDdy.xyz,vNormalWsDdy.xyz))), 0.333);
     //vRoughness.xy = max(vRoughness.xy, flGeometricRoughnessFactor.xx); //Ensure we don’t double-count roughness if normal map encodes geometric roughness 
     return flGeometricRoughnessFactor;
+}
+
+//Transmission - Based on a 2011 GDC Conference from by Colin Barre-Bresebois & Marc Bouchard
+//Modified by Xiexe
+float3 getTransmission(float3 subsurfaceColor, float3 attenuation, float3 diffuseColor, float thickness, float3 lightDir, float3 viewDir, float3 normal, float3 lightCol, float3 indirectDiffuse)
+{
+    float3 H = lightDir + normal * _TransmissionNormalDistortion;
+    float VdotH = pow(saturate(dot(viewDir, -H)), _TransmissionPower) * _TransmissionScale;
+    float3 I = attenuation * VdotH * thickness;
+    float3 transmission = I * lightCol;
+    return max(0, transmission * subsurfaceColor); // Make sure it doesn't go NaN
 }
 
 //Triplanar map a texture (Object or World space), or sample it normally.
