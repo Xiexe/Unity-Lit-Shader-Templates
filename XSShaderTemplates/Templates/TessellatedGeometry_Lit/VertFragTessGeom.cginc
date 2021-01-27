@@ -19,7 +19,7 @@ void geom(triangle vertexOutput v[3], inout TriangleStream<g2f> tristream)
     for (int i = 0; i < 3; i++)
     {
         o.pos = UnityObjectToClipPos(v[i].vertex);
-        o.uv = TRANSFORM_TEX(v[i].uv, _MainTex);
+        o.uv = v[i].uv;
         #if defined(UNITY_PASS_FORWARDBASE)
             o.uv1 = v[i].uv1;
             o.uv2 = v[i].uv2;

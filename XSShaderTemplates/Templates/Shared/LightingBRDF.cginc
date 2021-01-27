@@ -24,7 +24,7 @@ float4 CustomStandardLightingBRDF(
         float3 unmodifiedWorldNormal = normalize(i.btn[2]);
         float3 unmodifiedTangent = i.btn[1];
         float3 unmodifiedBitangent = i.btn[0];
-        float4 normalMap = texTP(_BumpMap, _MainTex_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
+        float4 normalMap = texTP(_BumpMap, _BumpMap_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
         float3 worldNormal = i.btn[2];
         float3 tangent = i.btn[1];
         float3 bitangent = i.btn[0];
@@ -39,32 +39,40 @@ float4 CustomStandardLightingBRDF(
     //----
 
     //METALLIC SMOOTHNESS
-        float4 metallicGlossMap = texTP(_MetallicGlossMap, _MainTex_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
+        float4 metallicGlossMap = texTP(_MetallicGlossMap, _MetallicGlossMap_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
         float4 metallicSmoothness = getMetallicSmoothness(metallicGlossMap);
         float metallic = metallicSmoothness.r;
         float reflectance = _Reflectance;
-        float roughness = metallicSmoothness.a;
-        albedo.rgb *= (1-metallic);
+        float roughness = max(metallicSmoothness.a, getGeometricSpecularAA(worldNormal));
+        albedo.rgb *= 1-metallic;
     //----
-    
-    //CURVATURE THICKNESS MAP
-        float4 curvature = texTP(_CurvatureThicknessMap, _MainTex_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
 
+    //CURVATURE THICKNESS MAP
+    float4 curvatureThicknessMap = 0;
+    float4 subsurfaceColorMap = 0;
+    if(_SubsurfaceMethod == 1)
+    {
+        //Contains Curvature, Thickness, and a Mask for both.
+        curvatureThicknessMap = texTP(_CurvatureThicknessMap, _CurvatureThicknessMap_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
+        //SUBSURFACE COLOR TEXTURE
+        subsurfaceColorMap = texTP(_CurvatureThicknessMap, _CurvatureThicknessMap_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
+    }
+    
     //OCCLUSION
-        float4 occlusionMap = texTP(_OcclusionMap, _MainTex_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
+        float4 occlusionMap = texTP(_OcclusionMap, _OcclusionMap_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
         float4 occlusion = lerp(_OcclusionColor, 1, occlusionMap);
     //----
 
     //EMISSION
         float4 emission = 0;
         #if defined(UNITY_PASS_FORWARDBASE) || defined(UNITY_PASS_META) // Emissions should only happen in the forward base pass (and meta pass)
-            float4 emissionMap = texTP(_EmissionMap, _MainTex_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
+            float4 emissionMap = texTP(_EmissionMap, _EmissionMap_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
             emission = emissionMap * _EmissionColor;
         #endif
     //----
     
     //CLEARCOAT MAP
-        float4 clearcoatMap = texTP(_ClearcoatMap, _MainTex_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
+        float4 clearcoatMap = texTP(_ClearcoatMap, _ClearcoatMap_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv);
         float4 clearcoatReflectivitySmoothness = getClearcoatSmoothness(clearcoatMap);
         float clearcoatReflectivity = clearcoatReflectivitySmoothness.r;
         float clearcoatRoughness = clearcoatReflectivitySmoothness.a;
@@ -84,6 +92,7 @@ float4 CustomStandardLightingBRDF(
     //DOT PRODUCTS FOR LIGHTING
         float ndl = dot(lightDir, worldNormal);
         float ndl01 = ndl * 0.5 + 0.5;
+        float unsaturatedNdl = ndl; 
         ndl = saturate(ndl);
         float vdn = abs(dot(viewDir, worldNormal));
         float vdh = saturate(dot(viewDir, halfVector));
@@ -91,7 +100,6 @@ float4 CustomStandardLightingBRDF(
         float ldh = saturate(dot(lightDir, halfVector));
         float ndh = saturate(dot(worldNormal, halfVector));
     //----
-
 
     //LIGHTING
     float3 diffuseNDL = ndl; //Modified for diffuse if using Subsurface Preintegrated mode, otherwise use normal Lambertian NDL.
@@ -123,18 +131,10 @@ float4 CustomStandardLightingBRDF(
             if(_SubsurfaceMethod == 1)
             {
                 //Calculates a Subsurface Scattering LUT with some cursed ass shit.
-                //This might all seem a bit confusing if you don't know whats going on - but check this output
-                //I'm emulating how a preintegrated texture looks. If you put this code into its own shader, and replace 
-                //curvature.r (remove .g) with uv.y, and ndl01 with uv.x, slap that on a quad, and you'll see the LUT that I'm creating here.
-                float3 subsurfaceColor = _SubsurfaceScatteringColor * lerp(1, diffuse, _SubsurfaceInheritDiffuse);
-                float3 transmission = getTransmission(subsurfaceColor, attenuation, diffuse, 1-curvature.g, lightDir, viewDir, worldNormal, lightCol, indirectDiffuse);
-                float curve = curvature.r * (1-curvature.g);
-                float x = smoothstep(0, 1, ndl01);
-                float x1 = smoothstep(0.4, 1, ndl01);
-                float x2 = smoothstep(0.45, 0.6, ndl01);
-                float3 scatter = ((curve * x) + x1 + (x * 0.05) + x2) / 3;
-                scatter *= lerp(1, subsurfaceColor, smoothstep(0.5,1,1-ndl));
-                diffuseNDL = scatter + transmission;
+                float3 subsurfaceColor = _SubsurfaceScatteringColor * subsurfaceColorMap * lerp(1, diffuse, _SubsurfaceInheritDiffuse);
+                float3 transmission = getTransmission(subsurfaceColor, attenuation, diffuse, 1-curvatureThicknessMap.g, lightDir, viewDir, worldNormal, lightCol, indirectDiffuse);
+                float3 subsurface = getSubsurfaceFalloff(ndl01, unsaturatedNdl, curvatureThicknessMap, subsurfaceColor);
+                diffuseNDL = lerp(subsurface + transmission, ndl, curvatureThicknessMap.b);
             }
     
             float3 atten = (attenuation * diffuseNDL * lightCol) + indirectDiffuse;
@@ -150,6 +150,7 @@ float4 CustomStandardLightingBRDF(
         float3 f0 = 0.16 * reflectance * reflectance * (1.0 - metallic) + diffuse * metallic;
         float3 fresnel = lerp(F_Schlick(vdn, f0), f0, metallic); //Kill fresnel on metallics, it looks bad.
         float3 directSpecular = getDirectSpecular(roughness, ndh, vdn, ndl, ldh, f0, halfVector, tangent, bitangent, _Anisotropy) * attenuation * ndl * lightCol;
+        
         float3 indirectSpecular = getIndirectSpecular(metallic, roughness, reflViewDir, worldPos, directDiffuse, worldNormal); //Lightmap is stored in directDiffuse and used for specular lightmap occlusion
 
         float3 vertexLightSpec = 0;

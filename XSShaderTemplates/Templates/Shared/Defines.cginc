@@ -5,12 +5,14 @@
 };
 
 sampler2D _MainTex; float4 _MainTex_ST;
-sampler2D _MetallicGlossMap;
-sampler2D _OcclusionMap;
-sampler2D _EmissionMap;
-sampler2D _BumpMap;
-sampler2D _ClearcoatMap;
-sampler2D _CurvatureThicknessMap;
+sampler2D _MetallicGlossMap; float4 _MetallicGlossMap_ST;
+sampler2D _OcclusionMap; float4 _OcclusionMap_ST;
+sampler2D _EmissionMap; float4 _EmissionMap_ST;
+sampler2D _BumpMap; float4 _BumpMap_ST;
+sampler2D _ClearcoatMap; float4 _ClearcoatMap_ST;
+sampler2D _CurvatureThicknessMap; float4 _CurvatureThicknessMap_ST;
+sampler2D _SubsurfaceColorMap; float4 _SubsurfaceColorMap_ST;
+
 float4 _Color, _EmissionColor, _OcclusionColor, _SubsurfaceScatteringColor;
 float _Metallic, _Glossiness, _Reflectance, _Anisotropy;
 float _ClearcoatAnisotropy, _Clearcoat, _ClearcoatGlossiness; 

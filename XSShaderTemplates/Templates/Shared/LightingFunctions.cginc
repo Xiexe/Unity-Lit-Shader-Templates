@@ -82,9 +82,8 @@ float shEvaluateDiffuseL1Geomerics(float L0, float3 L1, float3 n)
     // dynamic range constant
     // should vary between 4 (highly directional) and 0 (ambient)
     float a = (1.0f - lenR1 / R0) / (1.0f + lenR1 / R0);
-    
-    float g1 = R0 * (a + (1.0f - a) * (p + 1.0f) * pow(q, p));
-    return max(0, g1);
+
+    return R0 * (a + (1.0f - a) * (p + 1.0f) * pow(q, p));
 }
 
 // Energy conserving wrap diffuse term, does *not* include the divide by pi
@@ -185,7 +184,7 @@ float3 getIndirectDiffuse(float3 normal)
     float3 indirectDiffuse;
     if(_LightProbeMethod == 0)
     {
-        indirectDiffuse = ShadeSH9(float4(normal, 1));
+        indirectDiffuse = max(0, ShadeSH9(float4(normal, 1)));
     }
     else
     {
@@ -193,11 +192,6 @@ float3 getIndirectDiffuse(float3 normal)
         indirectDiffuse.r = shEvaluateDiffuseL1Geomerics(L0.r, unity_SHAr.xyz, normal);
         indirectDiffuse.g = shEvaluateDiffuseL1Geomerics(L0.g, unity_SHAg.xyz, normal);
         indirectDiffuse.b = shEvaluateDiffuseL1Geomerics(L0.b, unity_SHAb.xyz, normal);
-
-        if(!any(indirectDiffuse))
-        {
-            indirectDiffuse = ShadeSH9(float4(normal, 1));
-        }
     }
     return max(0, indirectDiffuse);
 }
@@ -228,9 +222,8 @@ float3 getBoxProjection (float3 direction, float3 position, float4 cubemapPositi
     return direction;
 }
 
-//Last parameter is used for lightmap occlusion only
 float3 getIndirectSpecular(float metallic, float roughness, float3 reflDir, float3 worldPos, float3 lightmap, float3 normal)
-{	//This function handls Unity style reflections, Matcaps, and a baked in fallback cubemap.
+{
     float3 spec = float3(0,0,0);
     #if defined(UNITY_PASS_FORWARDBASE)
         float3 indirectSpecular;
@@ -279,8 +272,7 @@ float3 getDirectSpecular(float roughness, float ndh, float vdn, float ndl, float
     float ab = max(rough * (1.0 - anisotropy), 0.001);
     float D = D_GGX_Anisotropic(ndh, halfVector, tangent, bitangent, at, ab);
     float V = V_SmithGGXCorrelated(vdn, ndl, rough);
-    float3 F = F_Schlick(ldh, f0);
-    return D * V;
+    return D * V * 2;
 }
 
 
@@ -291,8 +283,7 @@ void initBumpedNormalTangentBitangent(float4 normalMap, inout float3 bitangent, 
     float3 tspace2 = float3(tangent.z, bitangent.z, normal.z);
 
     float3 tangentNormal = UnpackScaleNormal(normalMap, _BumpScale);
-    tangentNormal.y *= -1;
-    
+
     float3 calcedNormal;
     calcedNormal.x = dot(tspace0, tangentNormal);
     calcedNormal.y = dot(tspace1, tangentNormal);
@@ -410,13 +401,23 @@ float getCurvature(float3 normal, float3 pos)
     return c;
 }
 
+float3 getSubsurfaceFalloff(float ndl01, float ndl, float3 curvature, float3 subsurfaceColor)
+{
+    float curva = (1/mad(curvature.r, 0.5 - 0.0625, 0.0625) - 2) / (16 - 2);
+    float oneMinusCurva = 1.0 - curva;
+    float x = ndl;
+    float n = ndl01;
+    float3 scatter = lerp(n, subsurfaceColor, saturate((1-x) * oneMinusCurva)) * smoothstep(0.2, 1, n * oneMinusCurva);
+    scatter = lerp(scatter, n, smoothstep(0, 1.1, x)); 
+    return scatter;
+}
+
 float getGeometricSpecularAA(float3 normal)
 {
     float3 vNormalWsDdx = ddx(normal.xyz);
     float3 vNormalWsDdy = ddy(normal.xyz);
     float flGeometricRoughnessFactor = pow(saturate(max(dot(vNormalWsDdx.xyz,vNormalWsDdx.xyz), dot(vNormalWsDdy.xyz,vNormalWsDdy.xyz))), 0.333);
-    //vRoughness.xy = max(vRoughness.xy, flGeometricRoughnessFactor.xx); //Ensure we don’t double-count roughness if normal map encodes geometric roughness 
-    return flGeometricRoughnessFactor;
+    return max(0, flGeometricRoughnessFactor);
 }
 
 //Transmission - Based on a 2011 GDC Conference from by Colin Barre-Bresebois & Marc Bouchard
@@ -449,7 +450,7 @@ float4 texTP( sampler2D tex, float4 tillingOffset, float3 worldPos, float3 objPo
         return xNorm * projNormal.x + yNorm * projNormal.y + zNorm * projNormal.z;
     }
     else{
-        return tex2D(tex, uv);
+        return tex2D(tex, uv * tillingOffset.xy + tillingOffset.zw);
     } 
 }
 

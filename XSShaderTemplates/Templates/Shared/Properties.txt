@@ -28,7 +28,8 @@ _OcclusionColor("Occlusion Color", Color) = (0,0,0,1)
 [Header(SUBSURFACE)]
 [Enum(Off, 0, Estimate, 1)]_SubsurfaceMethod("Subsurface Scattering Method", Int) = 0
 _CurvatureThicknessMap("Curvature Thickness Map", 2D) = "gray" {}
-_SubsurfaceScatteringColor("Subsurface Color", Color) = (0,0,0,1)
+_SubsurfaceColorMap("Subsurface Color Map", 2D) = "white" {}
+_SubsurfaceScatteringColor("Subsurface Color", Color) = (1,1,1,1)
 _SubsurfaceInheritDiffuse("Subsurface Inherit Diffuse", Range(0,1)) = 0
 _TransmissionNormalDistortion("Transmission Distortion", Range(0,3)) = 1
 _TransmissionPower("Transmission Power", Range(0,3)) = 1

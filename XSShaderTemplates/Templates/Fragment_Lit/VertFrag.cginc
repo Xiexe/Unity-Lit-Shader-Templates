@@ -8,7 +8,7 @@ v2f vert (appdata v)
     float3 bitangent = cross(tangent, worldNormal) * v.tangent.w;
 
     o.pos = UnityObjectToClipPos(v.vertex);
-    o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+    o.uv = v.uv, _MainTex;
     #if defined(UNITY_PASS_FORWARDBASE)
     o.uv1 = v.uv1;
     o.uv2 = v.uv2;
