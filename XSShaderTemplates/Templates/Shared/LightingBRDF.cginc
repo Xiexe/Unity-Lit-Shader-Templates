@@ -148,7 +148,7 @@ float4 CustomStandardLightingBRDF(
         float3 f0 = 0.16 * reflectance * reflectance * (1.0 - metallic) + diffuse * metallic;
         float3 fresnel = lerp(F_Schlick(vdn, f0), f0, metallic); //Kill fresnel on metallics, it looks bad.
         float3 directSpecular = getDirectSpecular(roughness, ndh, vdn, ndl, ldh, f0, halfVector, tangent, bitangent, _Anisotropy) * attenuation * ndl * lightCol;
-        float3 indirectSpecular = getIndirectSpecular(metallic, roughness, reflViewDir, worldPos, directDiffuse, worldNormal); //Lightmap is stored in directDiffuse and used for specular lightmap occlusion
+        float3 indirectSpecular = getIndirectSpecular(metallic, roughness, reflViewDir, worldPos, directDiffuse, worldNormal) * lerp(fresnel, f0, roughness); //Lightmap is stored in directDiffuse and used for specular lightmap occlusion
 
     //TODO: Move this into its own function...
         float3 vertexLightSpec = 0;
@@ -172,7 +172,7 @@ float4 CustomStandardLightingBRDF(
                 vertexLightClearcoatSpec += vLspecCC * vLight.ColorFalloff[i];
             }
         #endif
-        float3 specular = (indirectSpecular + directSpecular + vertexLightSpec) * lerp(fresnel, f0, roughness);
+        float3 specular = (indirectSpecular + directSpecular + vertexLightSpec);
     //----
 
     //Clearcoat BRDF

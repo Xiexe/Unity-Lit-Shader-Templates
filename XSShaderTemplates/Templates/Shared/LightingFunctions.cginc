@@ -271,15 +271,15 @@ float3 getDirectSpecular(float roughness, float ndh, float vdn, float ndl, float
         float Dn = D_GGX(ndh, rough);
         float3 F = F_Schlick(ldh, f0);
         float V = V_SmithGGXCorrelated(vdn, ndl, rough);
-        float3 directSpecularNonAniso = max(0, (Dn * V) * F) * 6;
+        float3 directSpecularNonAniso = max(0, (Dn * V) * F);
 
         anisotropy *= saturate(5.0 * roughness);
         float at = max(rough * (1.0 + anisotropy), 0.001);
         float ab = max(rough * (1.0 - anisotropy), 0.001);
         float D = D_GGX_Anisotropic(ndh, halfVector, tangent, bitangent, at, ab);
-        float3 directSpecularAniso = max(0, D * V);
+        float3 directSpecularAniso = max(0, (D * V) * F);
 
-        return lerp(directSpecularNonAniso, directSpecularAniso, abs(_Anisotropy));
+        return lerp(directSpecularNonAniso, directSpecularAniso, saturate(abs(_Anisotropy * 100)) ) * 3; // * 100 to prevent blending, blend because otherwise tangents are fucked on lightmapped object
     #else
         return 0;
     #endif
