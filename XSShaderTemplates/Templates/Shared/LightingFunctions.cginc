@@ -267,7 +267,7 @@ float3 getIndirectSpecular(float metallic, float roughness, float3 reflDir, floa
 float3 getDirectSpecular(float roughness, float ndh, float vdn, float ndl, float ldh, float3 f0, float3 halfVector, float3 tangent, float3 bitangent, float anisotropy)
 {
     #if !defined(LIGHTMAP_ON)
-        float rough = max(roughness * roughness, 0.045);
+        float rough = max(roughness * roughness, 0.0045);
         float Dn = D_GGX(ndh, rough);
         float3 F = F_Schlick(ldh, f0);
         float V = V_SmithGGXCorrelated(vdn, ndl, rough);
@@ -292,7 +292,7 @@ void initBumpedNormalTangentBitangent(float4 normalMap, inout float3 bitangent, 
     float3 tspace2 = float3(tangent.z, bitangent.z, normal.z);
 
     float3 tangentNormal = UnpackScaleNormal(normalMap, _BumpScale);
-    // tangentNormal.y *= -1;
+    tangentNormal.y *= -1;
 
     float3 calcedNormal;
     calcedNormal.x = dot(tspace0, tangentNormal);
@@ -367,7 +367,7 @@ float3 getLightCol(bool lightEnv, float3 lightColor, float3 indirectDominantColo
 float4 getClearcoatSmoothness(float4 clearcoatMap)
 {
     float roughness = 1-(_ClearcoatGlossiness * clearcoatMap.a);
-    roughness = clamp(roughness, 0.045, 1.0);
+    roughness = clamp(roughness, 0.0045, 1.0);
     roughness = roughness * roughness;
 
     float reflectivity = _Clearcoat * clearcoatMap.r;
