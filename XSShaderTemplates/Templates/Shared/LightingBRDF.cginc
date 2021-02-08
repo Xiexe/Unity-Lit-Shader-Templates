@@ -125,7 +125,7 @@ float4 CustomStandardLightingBRDF(
                     vertexLightData += saturate(dot(vLight.Direction[i], worldNormal)) * vLight.ColorFalloff[i];
                 }
             #endif
-            float3 indirectDiffuse = getIndirectDiffuse(worldNormal) + vertexLightData;
+            float3 indirectDiffuse = (getIndirectDiffuse(worldNormal) * occlusion) + vertexLightData;
 
             if(_SubsurfaceMethod == 1)
             {
@@ -189,6 +189,6 @@ float4 CustomStandardLightingBRDF(
     //----
 
     //TODO: Implement subsurface scattering
-    float3 litPixel = ((directDiffuse + specular + clearcoat) * occlusion) + emission;
+    float3 litPixel = directDiffuse + ((specular + clearcoat) * occlusion) + emission;
     return float4(max(0, litPixel), alpha);
 }
