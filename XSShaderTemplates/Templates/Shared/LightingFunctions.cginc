@@ -11,14 +11,14 @@ float sq(float a)
     return a*a;
 }
 
-float D_GGX(float NoH, float roughness) 
+float D_GGX(float NoH, float roughness)
 {
     float a2 = roughness * roughness;
     float f = (NoH * a2 - NoH) * NoH + 1.0;
     return a2 / (UNITY_PI * f * f);
 }
 
-float D_GGX_Anisotropic(float NoH, const float3 h, const float3 t, const float3 b, float at, float ab) 
+float D_GGX_Anisotropic(float NoH, const float3 h, const float3 t, const float3 b, float at, float ab)
 {
     float ToH = dot(t, h);
     float BoH = dot(b, h);
@@ -33,12 +33,12 @@ float V_Kelemen(float LoH) {
     return 0.25 / (LoH * LoH);
 }
 
-float3 F_Schlick(float u, float3 f0) 
+float3 F_Schlick(float u, float3 f0)
 {
     return f0 + (1.0 - f0) * pow(1.0 - u, 5.0);
 }
 
-float3 F_Schlick(const float3 f0, float f90, float VoH) 
+float3 F_Schlick(const float3 f0, float f90, float VoH)
 {
     // Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"
     return f0 + (f90 - f0) * pow5(1.0 - VoH);
@@ -50,7 +50,7 @@ float3 F_FresnelLerp (float3 F0, float3 F90, float cosA)
     return lerp (F0, F90, t);
 }
 
-float Fd_Burley(float roughness, float NoV, float NoL, float LoH) 
+float Fd_Burley(float roughness, float NoV, float NoL, float LoH)
 {
     // Burley 2012, "Physically-Based Shading at Disney"
     float f90 = 0.5 + 2.0 * roughness * LoH * LoH;
@@ -91,7 +91,7 @@ float Fd_Wrap(float NoL, float w) {
     return saturate((NoL + w) / sq(1.0 + w));
 }
 
-float V_SmithGGXCorrelated(float NoV, float NoL, float a) 
+float V_SmithGGXCorrelated(float NoV, float NoL, float a)
 {
     float a2 = a * a;
     float GGXL = NoV * sqrt((-NoL * a2 + NoL) * NoL + a2);
@@ -99,7 +99,7 @@ float V_SmithGGXCorrelated(float NoV, float NoL, float a)
     return 0.5 / (GGXV + GGXL);
 }
 
-float Fd_Lambert() 
+float Fd_Lambert()
 {
     return 1.0 / UNITY_PI;
 }
@@ -125,9 +125,9 @@ float3 get4VertexLightsColFalloff(inout VertexLightInformation vLight, float3 wo
         // Cleaner, nicer looking falloff. Also prevents the "Snapping in" effect that Unity's normal integration of vertex lights has.
         vertexLightAtten = atten;
 
-        lightColor.rgb += unity_LightColor[0] * atten.x; 
-        lightColor.rgb += unity_LightColor[1] * atten.y; 
-        lightColor.rgb += unity_LightColor[2] * atten.z; 
+        lightColor.rgb += unity_LightColor[0] * atten.x;
+        lightColor.rgb += unity_LightColor[1] * atten.y;
+        lightColor.rgb += unity_LightColor[2] * atten.z;
         lightColor.rgb += unity_LightColor[3] * atten.w;
 
         vLight.ColorFalloff[0] = unity_LightColor[0] * atten.x;
@@ -156,7 +156,7 @@ float3 getVertexLightsDir(inout VertexLightInformation vLights, float3 worldPos,
     float3 dirY = toLightY - worldPos;
     float3 dirZ = toLightZ - worldPos;
     float3 dirW = toLightW - worldPos;
-    
+
     dirX *= length(toLightX) * vertexLightAtten.x;
     dirY *= length(toLightY) * vertexLightAtten.y;
     dirZ *= length(toLightZ) * vertexLightAtten.z;
@@ -197,7 +197,7 @@ float3 getIndirectDiffuse(float3 normal)
 }
 
 //Reflection direction, worldPos, unity_SpecCube0_ProbePosition, unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax
-float3 getReflectionUV(float3 direction, float3 position, float4 cubemapPosition, float3 boxMin, float3 boxMax) 
+float3 getReflectionUV(float3 direction, float3 position, float4 cubemapPosition, float3 boxMin, float3 boxMax)
 {
     #if UNITY_SPECCUBE_BOX_PROJECTION
         if (cubemapPosition.w > 0) {
@@ -209,7 +209,7 @@ float3 getReflectionUV(float3 direction, float3 position, float4 cubemapPosition
     return direction;
 }
 
-float3 getBoxProjection (float3 direction, float3 position, float4 cubemapPosition, float3 boxMin, float3 boxMax) 
+float3 getBoxProjection (float3 direction, float3 position, float4 cubemapPosition, float3 boxMin, float3 boxMax)
 {
     // #if defined(UNITY_SPECCUBE_BOX_PROJECTION) // For some reason this doesn't work?
         if (cubemapPosition.w > 0) {
@@ -238,7 +238,7 @@ float3 getIndirectSpecular(float metallic, float roughness, float3 reflDir, floa
         float3 probe0 = Unity_GlossyEnvironment(UNITY_PASS_TEXCUBE(unity_SpecCube0), unity_SpecCube0_HDR, envData);
         float interpolator = unity_SpecCube0_BoxMin.w;
         UNITY_BRANCH
-        if (interpolator < 0.99999) 
+        if (interpolator < 0.99999)
         {
             envData.reflUVW = getBoxProjection(
                 reflDir, worldPos,
@@ -248,7 +248,7 @@ float3 getIndirectSpecular(float metallic, float roughness, float3 reflDir, floa
             float3 probe1 = Unity_GlossyEnvironment(UNITY_PASS_TEXCUBE_SAMPLER(unity_SpecCube1, unity_SpecCube0), unity_SpecCube0_HDR, envData);
             indirectSpecular = lerp(probe1, probe0, interpolator);
         }
-        else 
+        else
         {
             indirectSpecular = probe0;
         }
@@ -266,15 +266,24 @@ float3 getIndirectSpecular(float metallic, float roughness, float3 reflDir, floa
 
 float3 getDirectSpecular(float roughness, float ndh, float vdn, float ndl, float ldh, float3 f0, float3 halfVector, float3 tangent, float3 bitangent, float anisotropy)
 {
-    anisotropy *= saturate(5.0 * roughness);
-    float rough = max(roughness * roughness, 0.045);
-    float at = max(rough * (1.0 + anisotropy), 0.001);
-    float ab = max(rough * (1.0 - anisotropy), 0.001);
-    float D = D_GGX_Anisotropic(ndh, halfVector, tangent, bitangent, at, ab);
-    float V = V_SmithGGXCorrelated(vdn, ndl, rough);
-    return D * V * 2;
-}
+    #if !defined(LIGHTMAP_ON)
+        float rough = max(roughness * roughness, 0.045);
+        float Dn = D_GGX(ndh, rough);
+        float3 F = F_Schlick(ldh, f0);
+        float V = V_SmithGGXCorrelated(vdn, ndl, rough);
+        float3 directSpecularNonAniso = max(0, (Dn * V) * F) * 6;
 
+        anisotropy *= saturate(5.0 * roughness);
+        float at = max(rough * (1.0 + anisotropy), 0.001);
+        float ab = max(rough * (1.0 - anisotropy), 0.001);
+        float D = D_GGX_Anisotropic(ndh, halfVector, tangent, bitangent, at, ab);
+        float3 directSpecularAniso = max(0, D * V);
+
+        return lerp(directSpecularNonAniso, directSpecularAniso, abs(_Anisotropy));
+    #else
+        return 0;
+    #endif
+}
 
 void initBumpedNormalTangentBitangent(float4 normalMap, inout float3 bitangent, inout float3 tangent, inout float3 normal)
 {
@@ -283,6 +292,7 @@ void initBumpedNormalTangentBitangent(float4 normalMap, inout float3 bitangent, 
     float3 tspace2 = float3(tangent.z, bitangent.z, normal.z);
 
     float3 tangentNormal = UnpackScaleNormal(normalMap, _BumpScale);
+    // tangentNormal.y *= -1;
 
     float3 calcedNormal;
     calcedNormal.x = dot(tspace0, tangentNormal);
@@ -315,7 +325,7 @@ float3 getRealtimeLightmap(float2 uv, float3 worldNormal)
         float4 realtimeDirTex = UNITY_SAMPLE_TEX2D_SAMPLER(unity_DynamicDirectionality, unity_DynamicLightmap, realtimeUV);
         realtimeLightmap += DecodeDirectionalLightmap (realtimeLightmap, realtimeDirTex, worldNormal);
     #endif
-    
+
     return realtimeLightmap * _RTLMStrength;
 }
 
@@ -324,7 +334,7 @@ float3 getLightmap(float2 uv, float3 worldNormal, float3 worldPos)
     float2 lightmapUV = uv * unity_LightmapST.xy + unity_LightmapST.zw;
     float4 bakedColorTex = UNITY_SAMPLE_TEX2D(unity_Lightmap, lightmapUV);
     float3 lightMap = DecodeLightmap(bakedColorTex);
-    
+
     #ifdef DIRLIGHTMAP_COMBINED
         fixed4 bakedDirTex = UNITY_SAMPLE_TEX2D_SAMPLER (unity_LightmapInd, unity_Lightmap, lightmapUV);
         lightMap = DecodeDirectionalLightmap(lightMap, bakedDirTex, worldNormal);
@@ -337,7 +347,7 @@ float3 getLightDir(bool lightEnv, float3 worldPos)
 {
     //switch between using probes or actual light direction
     float3 lightDir = lightEnv ? UnityWorldSpaceLightDir(worldPos) : unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz;
-    
+
     #if !defined(POINT) && !defined(SPOT) && !defined(VERTEXLIGHT_ON) // if the average length of the light probes is null, and we don't have a directional light in the scene, fall back to our fallback lightDir
         if(length(unity_SHAr.xyz*unity_SHAr.w + unity_SHAg.xyz*unity_SHAg.w + unity_SHAb.xyz*unity_SHAb.w) == 0 && length(lightDir) < 0.1)
         {
@@ -379,11 +389,11 @@ float2 getScreenUVs(float4 screenPos)
 {
     float2 uv = screenPos / (screenPos.w + 0.0000000001); //0.0x1 Stops division by 0 warning in console.
     #if UNITY_SINGLE_PASS_STEREO
-        uv.xy *= float2(_ScreenParams.x * 2, _ScreenParams.y);	
+        uv.xy *= float2(_ScreenParams.x * 2, _ScreenParams.y);
     #else
         uv.xy *= _ScreenParams.xy;
     #endif
-    
+
     return uv;
 }
 
@@ -408,7 +418,7 @@ float3 getSubsurfaceFalloff(float ndl01, float ndl, float3 curvature, float3 sub
     float x = ndl;
     float n = ndl01;
     float3 scatter = lerp(n, subsurfaceColor, saturate((1-x) * oneMinusCurva)) * smoothstep(0.2, 1, n * oneMinusCurva);
-    scatter = lerp(scatter, n, smoothstep(0, 1.1, x)); 
+    scatter = lerp(scatter, n, smoothstep(0, 1.1, x));
     return scatter;
 }
 
@@ -438,7 +448,7 @@ float4 texTP( sampler2D tex, float4 tillingOffset, float3 worldPos, float3 objPo
     {
         worldPos = lerp(worldPos, objPos, _TextureSampleMode - 1);
         worldNormal = lerp(worldNormal, objNormal, _TextureSampleMode - 1);
-        
+
         float3 projNormal = pow(abs(worldNormal),falloff);
         projNormal /= projNormal.x + projNormal.y + projNormal.z;
         float3 nsign = sign(worldNormal);
@@ -451,7 +461,7 @@ float4 texTP( sampler2D tex, float4 tillingOffset, float3 worldPos, float3 objPo
     }
     else{
         return tex2D(tex, uv * tillingOffset.xy + tillingOffset.zw);
-    } 
+    }
 }
 
 inline float Dither8x8Bayer(int x, int y)
