@@ -287,17 +287,13 @@ float3 getDirectSpecular(float roughness, float ndh, float vdn, float ndl, float
 
 void initBumpedNormalTangentBitangent(float4 normalMap, inout float3 bitangent, inout float3 tangent, inout float3 normal)
 {
-    float3 tspace0 = float3(tangent.x, bitangent.x, normal.x);
-    float3 tspace1 = float3(tangent.y, bitangent.y, normal.y);
-    float3 tspace2 = float3(tangent.z, bitangent.z, normal.z);
-
     float3 tangentNormal = UnpackScaleNormal(normalMap, _BumpScale);
-    tangentNormal.y *= -1;
-
-    float3 calcedNormal;
-    calcedNormal.x = dot(tspace0, tangentNormal);
-    calcedNormal.y = dot(tspace1, tangentNormal);
-    calcedNormal.z = dot(tspace2, tangentNormal);
+    float3 calcedNormal = normalize
+    (
+		tangentNormal.x * tangent +
+		tangentNormal.y * bitangent +
+		tangentNormal.z * normal
+    );
 
     normal = normalize(calcedNormal);
     tangent = normalize(cross(normal, bitangent));
