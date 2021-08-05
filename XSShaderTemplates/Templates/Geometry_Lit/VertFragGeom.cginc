@@ -14,12 +14,12 @@ v2g vert (appdata v)
     v2g o = (v2g)0;
     o.vertex = v.vertex;
     o.uv = v.uv;
-    
+
     #if defined(UNITY_PASS_FORWARDBASE)
         o.uv1 = v.uv1;
         o.uv2 = v.uv2;
     #endif
-    
+
     o.normal = v.normal;
     o.tangent = v.tangent;
 
@@ -62,16 +62,41 @@ void geom(triangle v2g v[3], inout TriangleStream<g2f> tristream)
     }
     tristream.RestartStrip();
 }
-			
+
 fixed4 frag (g2f i) : SV_Target
 {
-        //Return only this if in the shadowcaster
+    //Return only this if in the shadowcaster
     #if defined(UNITY_PASS_SHADOWCASTER)
-        float4 albedo = texTP(_MainTex, _MainTex_ST, i.worldPos, i.objPos, i.btn[2], i.objNormal, _TriplanarFalloff, i.uv) * _Color;
+        float4 albedo = TextureSampleAdv(i, _MainTex, _MainTex_ST) * _Color;
         float alpha;
         doAlpha(alpha, albedo.a, i.screenPos);
         SHADOW_CASTER_FRAGMENT(i);
     #else
-        return CustomStandardLightingBRDF(i);
+        FragmentData o = (FragmentData)0;
+
+        float4 color = TextureSampleAdv(i, _MainTex, _MainTex_ST) * _Color;
+        float4 emissionColor = TextureSampleAdv(i, _EmissionMap, _EmissionMap_ST) * _EmissionColor;
+        float4 metallicGlossMap = TextureSampleAdv(i, _MetallicGlossMap, _MetallicGlossMap_ST);
+        float4 clearcoatMap = TextureSampleAdv(i, _ClearcoatMap, _ClearcoatMap_ST);
+        float4 normalMap = TextureSampleAdv(i, _BumpMap, _BumpMap_ST);
+        float4 occlusionMap = TextureSampleAdv(i, _OcclusionMap, _OcclusionMap_ST);
+        float4 curvatureThicknessMap = TextureSampleAdv(i, _CurvatureThicknessMap, _CurvatureThicknessMap_ST);
+        float4 subsurfaceColorMap = TextureSampleAdv(i, _CurvatureThicknessMap, _CurvatureThicknessMap_ST);
+
+        o.Albedo = color;
+        o.Normal = normalMap;
+        o.Emission = emissionColor;
+        o.Metallic = metallicGlossMap.r * _Metallic;
+        o.Reflectance = metallicGlossMap.g * _Reflectance;
+        o.Smoothness = metallicGlossMap.a * _Glossiness;
+        o.ClearcoatSmoothness = clearcoatMap.a * _ClearcoatGlossiness;
+        o.ClearcoatReflectance = clearcoatMap.r * _Clearcoat;
+        o.Occlusion = occlusionMap;
+        o.Curvature = curvatureThicknessMap.r;
+        o.Thickness = curvatureThicknessMap.g;
+        o.SubsurfaceTransmissionMask = curvatureThicknessMap.b;
+        o.SubsurfaceColor = subsurfaceColorMap * _SubsurfaceScatteringColor * lerp(1, o.Albedo, _SubsurfaceInheritDiffuse);
+        o.Alpha = color.a;
+        return CustomStandardLightingBRDF(i, o);
     #endif
 }

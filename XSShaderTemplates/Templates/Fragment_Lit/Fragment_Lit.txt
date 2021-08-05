@@ -8,7 +8,6 @@
 	SubShader
 	{
         $TAGS
-        $BLENDMODE
 
 		Pass
 		{
@@ -19,16 +18,15 @@
 			#pragma fragment frag
             #pragma multi_compile _ VERTEXLIGHT_ON
             #pragma multi_compile_fwdbase
-            $BLENDDEFINE
 
             #ifndef UNITY_PASS_FORWARDBASE
                 #define UNITY_PASS_FORWARDBASE
             #endif
-			
+
 			#include "UnityCG.cginc"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
-            
+
 			struct appdata
 			{
 				float4 vertex : POSITION;
@@ -57,7 +55,7 @@
             #include "LightingFunctions.cginc"
 			#include "LightingBRDF.cginc"
             #include "VertFrag.cginc"
-			
+
 			ENDCG
 		}
 
@@ -66,13 +64,12 @@
             Tags {"LightMode"="ForwardAdd"}
             Blend One One
             ZWrite Off
-            
+
 			CGPROGRAM
 			#pragma target 3.0
 			#pragma vertex vert
 			#pragma fragment frag
             #pragma multi_compile_fwdadd_fullshadows
-            $BLENDDEFINE
 
             #ifndef UNITY_PASS_FORWARDADD
                 #define UNITY_PASS_FORWARDADD
@@ -81,7 +78,7 @@
 			#include "UnityCG.cginc"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
-            
+
 			struct appdata
 			{
 				float4 vertex : POSITION;
@@ -106,7 +103,7 @@
             #include "LightingFunctions.cginc"
             #include "LightingBRDF.cginc"
 			#include "VertFrag.cginc"
-			
+
 			ENDCG
 		}
 
@@ -119,16 +116,15 @@
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_shadowcaster
-            $BLENDDEFINE
 
             #ifndef UNITY_PASS_SHADOWCASTER
                 #define UNITY_PASS_SHADOWCASTER
             #endif
-            
-            #include "UnityCG.cginc" 
+
+            #include "UnityCG.cginc"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
-            
+
             struct appdata
 			{
 				float4 vertex : POSITION;
@@ -154,4 +150,5 @@
             ENDCG
         }
 	}
+	$CUSTOMEDITOR
 }

@@ -1,10 +1,11 @@
 [Header(MAIN)]
+[Enum(Opaque, 0, Cutout, 1, Dithered, 2, Alpha To Coverage, 3, Transparent, 4, Fade, 5, Additive, 6)]_BlendMode("Blend Mode", Int) = 0
 [Enum(Unity Default, 0, Non Linear, 1)]_LightProbeMethod("Light Probe Sampling", Int) = 0
 [Enum(UVs, 0, Triplanar World, 1, Triplanar Object, 2)]_TextureSampleMode("Texture Mode", Int) = 0
 _TriplanarFalloff("Triplanar Blend", Range(0.5,1)) = 1
 _MainTex ("Main Texture", 2D) = "white" {}
 _Color ("Color", Color) = (1,1,1,1)
-//#CUTOUT!_Cutoff ("Alpha Cutoff", Range(0,1)) = 0.5
+_Cutoff ("Alpha Cutoff", Range(0,1)) = 0.5
 
 [Space(16)]
 [Header(NORMALS)]

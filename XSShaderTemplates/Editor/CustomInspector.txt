@@ -1,0 +1,38 @@
+﻿using UnityEditor;
+using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System;
+using System.Reflection;
+
+namespace XSTemplateShaders
+{
+    public partial class FoldoutToggles
+    {
+        //To draw foldouts, put your bools here. This will ensure that each material has a unique foldout state.
+        public bool ShowFoldout;
+    }
+
+    //Rename this file, and replace "CustomInspector" with the new name.
+    public class CustomInspector : TemplateShaderBaseInspector
+    {
+        //Put material properties here, they should be formatted as such..
+        //MaterialProperty _ShaderPropertyName = null;
+
+        public override void PluginGUI(MaterialEditor materialEditor, Material material)
+        {
+            DrawCustomGUI(materialEditor, material);
+        }
+
+        private void DrawCustomGUI(MaterialEditor materialEditor, Material material)
+        {
+            //to do a foldout, format like this
+            Foldouts[material].ShowFoldout = XSStyles.ShurikenFoldout("Check Editor Subfolder!", Foldouts[material].ShowFoldout);
+            if (Foldouts[material].ShowFoldout)
+            {
+                //Draw settings in here.
+            }
+        }
+    }
+}

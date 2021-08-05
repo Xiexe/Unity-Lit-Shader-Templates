@@ -8,7 +8,6 @@
 	SubShader
 	{
         $TAGS
-        $BLENDMODE
 
 		Pass
 		{
@@ -21,16 +20,15 @@
             #pragma multi_compile_fwdbase
             #pragma target 4.0
             #define GEOMETRY
-            $BLENDDEFINE
 
             #ifndef UNITY_PASS_FORWARDBASE
                 #define UNITY_PASS_FORWARDBASE
             #endif
-			
+
 			#include "UnityCG.cginc"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
-            
+
 			struct appdata
 			{
 				float4 vertex : POSITION;
@@ -69,7 +67,7 @@
             #include "LightingFunctions.cginc"
             #include "LightingBRDF.cginc"
 			#include "VertFragGeom.cginc"
-			
+
 			ENDCG
 		}
 
@@ -78,7 +76,7 @@
             Tags {"LightMode"="ForwardAdd"}
             Blend One One
             ZWrite Off
-            
+
 			CGPROGRAM
 			#pragma vertex vert
             #pragma geometry geom
@@ -86,16 +84,15 @@
             #pragma multi_compile_fwdadd_fullshadows
             #pragma target 4.0
             #define GEOMETRY
-            $BLENDDEFINE
 
             #ifndef UNITY_PASS_FORWARDADD
                 #define UNITY_PASS_FORWARDADD
             #endif
-			
+
 			#include "UnityCG.cginc"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
-            
+
 			struct appdata
 			{
 				float4 vertex : POSITION;
@@ -124,12 +121,12 @@
                 SHADOW_COORDS(8)
             };
 
-			
+
             #include "Defines.cginc"
             #include "LightingFunctions.cginc"
             #include "LightingBRDF.cginc"
 			#include "VertFragGeom.cginc"
-			
+
 			ENDCG
 		}
 
@@ -138,7 +135,7 @@
             Tags{"LightMode" = "ShadowCaster"} //Removed "DisableBatching" = "True". If issues arise re-add this.
             Cull Off
             CGPROGRAM
-            #include "UnityCG.cginc" 
+            #include "UnityCG.cginc"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
             #pragma vertex vert
@@ -147,12 +144,11 @@
             #pragma multi_compile_shadowcaster
             #pragma target 4.0
             #define GEOMETRY
-            $BLENDDEFINE
-            
+
             #ifndef UNITY_PASS_SHADOWCASTER
                 #define UNITY_PASS_SHADOWCASTER
             #endif
-            
+
             struct appdata
 			{
 				float4 vertex : POSITION;
@@ -186,4 +182,5 @@
             ENDCG
         }
 	}
+	$CUSTOMEDITOR
 }

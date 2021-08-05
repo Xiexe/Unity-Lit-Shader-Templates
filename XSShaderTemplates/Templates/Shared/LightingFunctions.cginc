@@ -171,14 +171,6 @@ float3 getVertexLightsDir(inout VertexLightInformation vLights, float3 worldPos,
     return dir;
 }
 
-float4 getMetallicSmoothness(float4 metallicGlossMap)
-{
-    float roughness = 1-(_Glossiness * metallicGlossMap.a);
-    float metallic = metallicGlossMap.r * _Metallic;
-    float reflectance = metallicGlossMap.g * _Reflectance;
-    return float4(metallic, reflectance, 0, roughness);
-}
-
 float3 getIndirectDiffuse(float3 normal)
 {
     float3 indirectDiffuse;
@@ -285,21 +277,6 @@ float3 getDirectSpecular(float roughness, float ndh, float vdn, float ndl, float
     #endif
 }
 
-void initBumpedNormalTangentBitangent(float4 normalMap, inout float3 bitangent, inout float3 tangent, inout float3 normal)
-{
-    float3 tangentNormal = UnpackScaleNormal(normalMap, _BumpScale);
-    float3 calcedNormal = normalize
-    (
-		tangentNormal.x * tangent +
-		tangentNormal.y * bitangent +
-		tangentNormal.z * normal
-    );
-
-    normal = normalize(calcedNormal);
-    tangent = normalize(cross(normal, bitangent));
-    bitangent = normalize(cross(normal, tangent));
-}
-
 float3 getAnisotropicReflectionVector(float3 viewDir, float3 bitangent, float3 tangent, float3 normal, float roughness, float anisotropy)
 {
     //_Anisotropy = lerp(-0.2, 0.2, sin(_Time.y / 20)); //This is pretty fun
@@ -360,14 +337,11 @@ float3 getLightCol(bool lightEnv, float3 lightColor, float3 indirectDominantColo
     return c;
 }
 
-float4 getClearcoatSmoothness(float4 clearcoatMap)
+float getSquaredRoughness(float roughness)
 {
-    float roughness = 1-(_ClearcoatGlossiness * clearcoatMap.a);
     roughness = clamp(roughness, 0.0045, 1.0);
     roughness = roughness * roughness;
-
-    float reflectivity = _Clearcoat * clearcoatMap.r;
-    return float4(reflectivity, 0, 0, roughness);
+    return roughness;
 }
 
 float3 getClearcoat(float3 baseColor, float reflectivity, float roughness, float ldh, float ndh, float Fr, float3 Fd)
@@ -407,9 +381,9 @@ float getCurvature(float3 normal, float3 pos)
     return c;
 }
 
-float3 getSubsurfaceFalloff(float ndl01, float ndl, float3 curvature, float3 subsurfaceColor)
+float3 getSubsurfaceFalloff(float ndl01, float ndl, float curvature, float3 subsurfaceColor)
 {
-    float curva = (1/mad(curvature.r, 0.5 - 0.0625, 0.0625) - 2) / (16 - 2);
+    float curva = (1/mad(curvature, 0.5 - 0.0625, 0.0625) - 2) / (16 - 2);
     float oneMinusCurva = 1.0 - curva;
     float x = ndl;
     float n = ndl01;
@@ -438,14 +412,22 @@ float3 getTransmission(float3 subsurfaceColor, float3 attenuation, float3 diffus
 }
 
 //Triplanar map a texture (Object or World space), or sample it normally.
-float4 texTP( sampler2D tex, float4 tillingOffset, float3 worldPos, float3 objPos, float3 worldNormal, float3 objNormal, float falloff, float2 uv)
+float4 TextureSampleAdv(
+    #if defined(GEOMETRY)
+        in g2f i,
+    #elif defined(TESSELLATION)
+        in vertexOutput i,
+    #else
+        in v2f i,
+    #endif
+    sampler2D tex, float4 tillingOffset)
 {
     if(_TextureSampleMode != 0)
     {
-        worldPos = lerp(worldPos, objPos, _TextureSampleMode - 1);
-        worldNormal = lerp(worldNormal, objNormal, _TextureSampleMode - 1);
+        float3 worldPos = lerp(i.worldPos, i.objPos, _TextureSampleMode - 1);
+        float3 worldNormal = lerp(i.btn[2], i.objNormal, _TextureSampleMode - 1);
 
-        float3 projNormal = pow(abs(worldNormal),falloff);
+        float3 projNormal = pow(abs(worldNormal), _TriplanarFalloff);
         projNormal /= projNormal.x + projNormal.y + projNormal.z;
         float3 nsign = sign(worldNormal);
         float4 xNorm; float4 yNorm; float4 zNorm;
@@ -456,7 +438,7 @@ float4 texTP( sampler2D tex, float4 tillingOffset, float3 worldPos, float3 objPo
         return xNorm * projNormal.x + yNorm * projNormal.y + zNorm * projNormal.z;
     }
     else{
-        return tex2D(tex, uv * tillingOffset.xy + tillingOffset.zw);
+        return tex2D(tex, i.uv * tillingOffset.xy + tillingOffset.zw);
     }
 }
 
@@ -497,4 +479,47 @@ void doAlpha(inout float alpha, float4 diffuse, float4 screenPos)
     #if defined(TRANSPARENT) || defined(ALPHATOCOVERAGE)
         alpha = diffuse.a; //should be maintex * color
     #endif
+}
+
+void PopulateLightingStructs(
+    #if defined(GEOMETRY)
+        in g2f i,
+    #elif defined(TESSELLATION)
+        in vertexOutput i,
+    #else
+        in v2f i,
+    #endif
+    inout FragmentData surface, inout NormalData normal_data, inout DotProducts dot_products, inout LightingVectors lighting_vectors)
+{
+    normal_data.WorldNormal = normalize(i.btn[2]);
+    normal_data.Tangent = i.btn[1];
+    normal_data.Bitangent = i.btn[0];
+
+    float3 tangentNormal = UnpackScaleNormal(surface.Normal, _BumpScale);
+    tangentNormal.y *= -1;
+    normal_data.BumpedWorldNormal = normalize(tangentNormal.x * normal_data.Tangent + tangentNormal.y * normal_data.Bitangent + tangentNormal.z * normal_data.WorldNormal);
+    normal_data.BumpedTangent = normalize(cross(normal_data.WorldNormal, normal_data.Bitangent));
+    normal_data.BumpedBitangent = normalize(cross(normal_data.WorldNormal, normal_data.Tangent));
+
+    bool lightEnv = any(_WorldSpaceLightPos0.xyz);
+    lighting_vectors.lightEnv = lightEnv;
+    lighting_vectors.indirectDominantColor = half3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
+    lighting_vectors.lightDir = getLightDir(lightEnv, i.worldPos);
+    lighting_vectors.lightCol = getLightCol(lightEnv, _LightColor0.rgb, lighting_vectors.indirectDominantColor);
+    lighting_vectors.viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
+    lighting_vectors.lvHalfVector = normalize(lighting_vectors.lightDir + lighting_vectors.viewDir);
+    lighting_vectors.reflViewDir = getAnisotropicReflectionVector(lighting_vectors.viewDir, normal_data.BumpedBitangent, normal_data.BumpedTangent, normal_data.BumpedWorldNormal, surface.Smoothness, _Anisotropy);
+    lighting_vectors.reflLightDir = reflect(lighting_vectors.lightDir, normal_data.BumpedWorldNormal);
+
+    dot_products.ndl = dot(lighting_vectors.lightDir, normal_data.BumpedWorldNormal);
+    dot_products.ndl01 = dot_products.ndl * 0.5 + 0.5;
+    dot_products.rawNdl = dot_products.ndl;
+    dot_products.ndl = saturate(dot_products.ndl);
+    dot_products.vdn = abs(dot(lighting_vectors.viewDir, normal_data.BumpedWorldNormal));
+    dot_products.vdh = saturate(dot(lighting_vectors.viewDir, lighting_vectors.lvHalfVector));
+    dot_products.rdv = saturate(dot(lighting_vectors.reflLightDir, float4(-lighting_vectors.viewDir, 0)));
+    dot_products.ldh = saturate(dot(lighting_vectors.lightDir, lighting_vectors.lvHalfVector));
+    dot_products.ndh = saturate(dot(normal_data.BumpedWorldNormal, lighting_vectors.lvHalfVector));
+
+    surface.Smoothness = max(surface.Smoothness, getGeometricSpecularAA(normal_data.BumpedWorldNormal));
 }

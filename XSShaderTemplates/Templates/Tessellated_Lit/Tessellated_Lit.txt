@@ -1,19 +1,18 @@
-Shader "Template/Tessellated" 
+Shader "Template/Tessellated"
 {
     Properties
     {
         $PROPERTIES#TESS
     }
 
-    SubShader 
+    SubShader
     {
         $TAGS
-        $BLENDMODE
 
-        Pass 
-        {  
-            Tags{"LightMode"="ForwardBase"} 
-            
+        Pass
+        {
+            Tags{"LightMode"="ForwardBase"}
+
             CGPROGRAM
             #include "UnityCG.cginc"
             #include "AutoLight.cginc"
@@ -23,9 +22,8 @@ Shader "Template/Tessellated"
             #pragma domain domain
             #pragma fragment frag
             #pragma multi_compile _ VERTEXLIGHT_ON
-            #pragma multi_compile_fwdbase 
+            #pragma multi_compile_fwdbase
             #define TESSELLATION
-            $BLENDDEFINE
 
             #ifndef UNITY_PASS_FORWARDBASE
                 #define UNITY_PASS_FORWARDBASE
@@ -54,7 +52,7 @@ Shader "Template/Tessellated"
                 float4 screenPos : TEXCOORD9;
                 SHADOW_COORDS(10)
             };
-            
+
             #include "Defines.cginc"
             #include "LightingFunctions.cginc"
             #include "LightingBRDF.cginc"
@@ -62,9 +60,9 @@ Shader "Template/Tessellated"
             ENDCG
         }
 
-        Pass 
-        {  
-            Tags{"LightMode"="ForwardAdd"} 
+        Pass
+        {
+            Tags{"LightMode"="ForwardAdd"}
             Blend One One
             ZWrite Off
             CGPROGRAM
@@ -77,7 +75,6 @@ Shader "Template/Tessellated"
             #pragma fragment frag
             #pragma multi_compile_fwdadd_fullshadows
             #define TESSELLATION
-            $BLENDDEFINE
 
             #ifndef UNITY_PASS_FORWARDADD
                 #define UNITY_PASS_FORWARDADD
@@ -102,7 +99,7 @@ Shader "Template/Tessellated"
                 float4 screenPos : TEXCOORD7;
                 SHADOW_COORDS(8)
             };
-      
+
             #include "Defines.cginc"
             #include "LightingFunctions.cginc"
             #include "LightingBRDF.cginc"
@@ -110,9 +107,9 @@ Shader "Template/Tessellated"
             ENDCG
         }
 
-        Pass 
-        {  
-            Tags{"LightMode"="ShadowCaster"} 
+        Pass
+        {
+            Tags{"LightMode"="ShadowCaster"}
             CGPROGRAM
             #include "UnityCG.cginc"
             #include "AutoLight.cginc"
@@ -122,8 +119,8 @@ Shader "Template/Tessellated"
             #pragma domain domain
             #pragma fragment frag
             #pragma multi_compile_shadowcaster
-            $BLENDDEFINE
-            
+            #define TESSELLATION
+
             #ifndef UNITY_PASS_SHADOWCASTER
                 #define UNITY_PASS_SHADOWCASTER
             #endif
@@ -146,11 +143,12 @@ Shader "Template/Tessellated"
                 float3 objNormal : TEXCOORD6;
                 float4 screenPos : TEXCOORD7;
             };
-            
+
             #include "Defines.cginc"
             #include "LightingFunctions.cginc"
             #include "VertFragTess.cginc"
             ENDCG
         }
     }
+	$CUSTOMEDITOR
 }
